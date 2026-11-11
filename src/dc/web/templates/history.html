@@ -4,17 +4,17 @@
 
 {% block content %}
 
-<div class="alert alert-info">
-  ℹ All training runs, inspections, and batch predictions are stored in <code>.web_data/history.db</code>.
-</div>
+<p class="text-muted small mb-3">
+  All training runs, inspections, and batch predictions are stored in <code>.web_data/history.db</code>.
+</p>
 
-<!-- Training Runs -->
+<!-- Training runs -->
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>🧠 Training Runs</h4>
+    <h4>Training Runs</h4>
     <span class="badge badge-muted">{{ runs|length }}</span>
   </div>
-  <div class="fm-card-body" style="padding:0;">
+  <div class="fm-card-body p-0">
     <div class="table-responsive">
       <table class="table">
         <thead>
@@ -26,12 +26,12 @@
         <tbody>
           {% for r in runs %}
             <tr>
-              <td class="text-muted" style="font-size:12px;">{{ r.created_at }}</td>
+              <td class="text-muted small" style="white-space:nowrap;">{{ r.created_at[:19].replace('T', ' ') if r.created_at else '' }}</td>
               <td><span class="badge badge-muted">{{ r.type }}</span></td>
               <td>
-                {% if r.status == 'done' %}
+                {% if r.status in ('done', 'completed', 'success') %}
                   <span class="badge badge-success">{{ r.status }}</span>
-                {% elif r.status == 'error' %}
+                {% elif r.status in ('error', 'failed') %}
                   <span class="badge badge-danger">{{ r.status }}</span>
                 {% else %}
                   <span class="badge badge-warning">{{ r.status }}</span>
@@ -39,11 +39,11 @@
               </td>
               <td>{{ r.target }}</td>
               <td>{{ r.positive_label }}</td>
-              <td style="font-family:var(--mono);font-size:11.5px;">{{ r.model_path }}</td>
-              <td style="font-family:var(--mono);font-size:11.5px;">{{ r.data_file }}</td>
+              <td class="mono small">{{ r.model_path }}</td>
+              <td class="mono small">{{ r.data_file }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px;">No runs yet</td></tr>
+            <tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px;">No runs yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -51,13 +51,13 @@
   </div>
 </div>
 
-<!-- Batch Predictions -->
+<!-- Batch predictions -->
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>📦 Batch Predictions</h4>
+    <h4>Batch Predictions</h4>
     <span class="badge badge-muted">{{ predictions|length }}</span>
   </div>
-  <div class="fm-card-body" style="padding:0;">
+  <div class="fm-card-body p-0">
     <div class="table-responsive">
       <table class="table">
         <thead>
@@ -69,15 +69,15 @@
         <tbody>
           {% for p in predictions %}
             <tr>
-              <td class="text-muted" style="font-size:12px;">{{ p.created_at }}</td>
-              <td style="font-family:var(--mono);font-size:11.5px;">{{ p.input_file }}</td>
-              <td style="font-family:var(--mono);font-size:11.5px;">{{ p.output_file }}</td>
-              <td style="font-family:var(--mono);font-size:11.5px;">{{ p.model_path }}</td>
+              <td class="text-muted small" style="white-space:nowrap;">{{ p.created_at[:19].replace('T', ' ') if p.created_at else '' }}</td>
+              <td class="mono small">{{ p.input_file }}</td>
+              <td class="mono small">{{ p.output_file }}</td>
+              <td class="mono small">{{ p.model_path }}</td>
               <td><span class="badge badge-muted">{{ p.threshold }}</span></td>
               <td><strong>{{ p.count }}</strong></td>
             </tr>
           {% else %}
-            <tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">No batch predictions yet</td></tr>
+            <tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">No batch predictions yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -88,27 +88,25 @@
 <!-- Inspections -->
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>🔍 Inspections</h4>
+    <h4>Inspections</h4>
     <span class="badge badge-muted">{{ inspections|length }}</span>
   </div>
-  <div class="fm-card-body" style="padding:0;">
+  <div class="fm-card-body p-0">
     <div class="table-responsive">
       <table class="table">
         <thead>
-          <tr>
-            <th>Created</th><th>Data file</th><th>Target</th><th>Report (MD)</th>
-          </tr>
+          <tr><th>Created</th><th>Data file</th><th>Target</th><th>Report</th></tr>
         </thead>
         <tbody>
           {% for i in inspections %}
             <tr>
-              <td class="text-muted" style="font-size:12px;">{{ i.created_at }}</td>
-              <td style="font-family:var(--mono);font-size:11.5px;">{{ i.data_file }}</td>
+              <td class="text-muted small" style="white-space:nowrap;">{{ i.created_at[:19].replace('T', ' ') if i.created_at else '' }}</td>
+              <td class="mono small">{{ i.data_file }}</td>
               <td>{{ i.target }}</td>
-              <td style="font-family:var(--mono);font-size:11.5px;">{{ i.report_md }}</td>
+              <td class="mono small">{{ i.report_md }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="4" class="text-muted" style="text-align:center;padding:24px;">No inspections yet</td></tr>
+            <tr><td colspan="4" class="text-muted" style="text-align:center;padding:24px;">No inspections yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>

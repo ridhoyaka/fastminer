@@ -1,30 +1,30 @@
 {% extends "base.html" %}
 {% block title %}Training… — Fast Miner{% endblock %}
-{% block page_title %}Training in progress{% endblock %}
+{% block page_title %}Training{% endblock %}
 
 {% block content %}
-<div class="fm-card" style="max-width:680px;">
+<div class="fm-card" style="max-width:600px;">
   <div class="fm-card-header">
-    <h4>⏳ Training in progress</h4>
+    <h4>Training in progress</h4>
   </div>
   <div class="fm-card-body">
-    <p class="text-muted">Running in the background — page will redirect when complete.</p>
+    <p>Running in the background. The page will redirect when complete.</p>
 
-    <div id="status" style="font-size:13px;font-weight:500;color:var(--accent);margin-bottom:10px;">
+    <div id="status" class="small mb-2" style="color:var(--accent); font-weight:500;">
       Starting…
     </div>
 
-    <div class="progress" style="height:10px;margin-bottom:16px;">
+    <div class="progress mb-3">
       <div id="bar" class="progress-bar progress-bar-animated" style="width:10%;"></div>
     </div>
 
-    <pre id="log" style="max-height:280px;overflow:auto;font-size:12px;"></pre>
+    <pre id="log" style="max-height:260px;overflow:auto;font-size:12px;"></pre>
   </div>
 </div>
 
 <script>
   const jobId = "{{ job_id }}";
-  const log    = document.getElementById('log');
+  const logEl  = document.getElementById('log');
   const status = document.getElementById('status');
   const bar    = document.getElementById('bar');
   let pct = 10;
@@ -38,6 +38,8 @@
             for (let m of data.messages) {
               if (m[0] === 'progress') {
                 status.textContent = m[1];
+                logEl.textContent += m[1] + '\n';
+                logEl.scrollTop = logEl.scrollHeight;
                 if (typeof m[2] === 'number') {
                   pct = Math.max(10, Math.min(95, Math.round(m[2] * 100)));
                   bar.style.width = pct + '%';
@@ -47,14 +49,14 @@
           }
           setTimeout(poll, 1000);
         } else if (data.status === 'done') {
-          status.textContent = '✓ Complete — redirecting…';
+          status.textContent = 'Complete — redirecting…';
           bar.style.width = '100%';
           bar.classList.remove('progress-bar-animated');
           window.location = data.redirect;
         } else if (data.status === 'error') {
-          status.textContent = '✗ Error';
+          status.textContent = 'Error';
           status.style.color = 'var(--danger)';
-          log.textContent = data.error;
+          logEl.textContent = data.error;
           bar.classList.remove('progress-bar-animated');
           bar.style.background = 'var(--danger)';
         }

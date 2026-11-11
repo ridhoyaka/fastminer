@@ -4,115 +4,175 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Fast Miner{% endblock %}</title>
-  <!-- Bootstrap (for js helpers only) -->
   <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-  <!-- Modern theme -->
   <link href="{{ url_for('static', filename='css/theme.css') }}" rel="stylesheet">
   <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
 </head>
 <body>
 
-<!-- ───────────── Sidebar ───────────── -->
-<aside class="fm-sidebar">
-  <div class="fm-sidebar-header">
+<!-- Overlay for mobile sidebar -->
+<div class="fm-overlay" id="fm-overlay" onclick="closeSidebar()"></div>
+
+<div class="fm-shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="fm-sidebar" id="fm-sidebar">
+
     <a class="fm-logo" href="{{ url_for('index') }}">
-      <div class="fm-logo-icon">⚡</div>
-      <div class="fm-logo-text">
-        Fast Miner
-        <span>ML · Offline</span>
+      <div class="fm-logo-mark">
+        <!-- Simple lightning bolt icon using SVG -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="fm-logo-name">Fast Miner</div>
+        <span class="fm-logo-tag">ML · Offline</span>
       </div>
     </a>
-  </div>
 
-  <nav class="fm-nav">
-    <div class="fm-nav-section">Pipeline</div>
+    <nav class="fm-nav">
+      <div class="fm-nav-group">Pipeline</div>
 
-    <a href="{{ url_for('data_page') }}"
-       class="{{ 'active' if request.endpoint == 'data_page' else '' }}">
-      <span class="fm-nav-icon">📂</span> Data
-      <span class="fm-nav-step">1</span>
-    </a>
+      <a href="{{ url_for('data_page') }}"
+         class="{{ 'active' if request.endpoint == 'data_page' }}">
+        <svg class="fm-nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        Data
+        <span class="fm-nav-step">1</span>
+      </a>
 
-    <a href="{{ url_for('explore') }}"
-       class="{{ 'active' if request.endpoint == 'explore' else '' }}">
-      <span class="fm-nav-icon">🔍</span> Explore
-      <span class="fm-nav-step">2</span>
-    </a>
+      <a href="{{ url_for('explore') }}"
+         class="{{ 'active' if request.endpoint == 'explore' }}">
+        <svg class="fm-nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Explore
+        <span class="fm-nav-step">2</span>
+      </a>
 
-    <a href="{{ url_for('train_page') }}"
-       class="{{ 'active' if request.endpoint == 'train_page' else '' }}">
-      <span class="fm-nav-icon">🧠</span> Train
-      <span class="fm-nav-step">3</span>
-    </a>
+      <a href="{{ url_for('train_page') }}"
+         class="{{ 'active' if request.endpoint == 'train_page' }}">
+        <svg class="fm-nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        Train
+        <span class="fm-nav-step">3</span>
+      </a>
 
-    <a href="{{ url_for('evaluate_page') }}"
-       class="{{ 'active' if request.endpoint == 'evaluate_page' else '' }}">
-      <span class="fm-nav-icon">📊</span> Evaluate
-      <span class="fm-nav-step">4</span>
-    </a>
+      <a href="{{ url_for('evaluate_page') }}"
+         class="{{ 'active' if request.endpoint == 'evaluate_page' }}">
+        <svg class="fm-nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        Evaluate
+        <span class="fm-nav-step">4</span>
+      </a>
 
-    <a href="{{ url_for('predict_page') }}"
-       class="{{ 'active' if request.endpoint == 'predict_page' else '' }}">
-      <span class="fm-nav-icon">🎯</span> Predict
-      <span class="fm-nav-step">5</span>
-    </a>
+      <a href="{{ url_for('predict_page') }}"
+         class="{{ 'active' if request.endpoint == 'predict_page' }}">
+        <svg class="fm-nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
+        </svg>
+        Predict
+        <span class="fm-nav-step">5</span>
+      </a>
 
-    <div class="fm-nav-section">Manage</div>
+      <div class="fm-nav-group">Manage</div>
 
-    <a href="{{ url_for('model_page') }}"
-       class="{{ 'active' if request.endpoint == 'model_page' else '' }}">
-      <span class="fm-nav-icon">🗂</span> Models
-    </a>
+      <a href="{{ url_for('model_page') }}"
+         class="{{ 'active' if request.endpoint == 'model_page' }}">
+        <svg class="fm-nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        Models
+      </a>
 
-    <a href="{{ url_for('history_page') }}"
-       class="{{ 'active' if request.endpoint == 'history_page' else '' }}">
-      <span class="fm-nav-icon">🕓</span> History
-    </a>
+      <a href="{{ url_for('history_page') }}"
+         class="{{ 'active' if request.endpoint == 'history_page' }}">
+        <svg class="fm-nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        History
+      </a>
 
-    <a href="{{ url_for('storage_page') }}"
-       class="{{ 'active' if request.endpoint == 'storage_page' else '' }}">
-      <span class="fm-nav-icon">🗄</span> Storage
-    </a>
-  </nav>
+      <a href="{{ url_for('storage_page') }}"
+         class="{{ 'active' if request.endpoint == 'storage_page' }}">
+        <svg class="fm-nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </svg>
+        Storage
+      </a>
+    </nav>
 
-  <div class="fm-sidebar-footer">
-    <div class="fm-status-badge">
-      <div class="fm-status-dot"></div>
+    <div class="fm-sidebar-footer">
+      <div class="fm-dot"></div>
       Offline · Local only
     </div>
-  </div>
-</aside>
+  </aside>
 
-<!-- ───────────── Main ───────────── -->
-<div class="fm-main">
+  <!-- ── Main ── -->
+  <div class="fm-main">
 
-  <header class="fm-topbar">
-    <div class="fm-breadcrumb">
-      <span>Fast Miner</span>
-      <span>/</span>
-      <strong>{% block page_title %}Home{% endblock %}</strong>
-    </div>
-    <div class="fm-topbar-actions">
-      <a class="btn btn-outline btn-sm" href="{{ url_for('storage_page') }}">🗄 Storage</a>
-    </div>
-  </header>
+    <header class="fm-topbar">
+      <!-- Mobile toggle -->
+      <button class="fm-nav-toggle" onclick="openSidebar()" aria-label="Open menu">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
 
-  <main class="fm-content">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ 'danger' if category=='error' else category }} alert-dismissible" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+      <div class="fm-breadcrumb">
+        <span>Fast Miner</span>
+        <span style="color:var(--border);">/</span>
+        <strong>{% block page_title %}Home{% endblock %}</strong>
+      </div>
 
-    {% block content %}{% endblock %}
-  </main>
-</div>
+      <div class="fm-topbar-meta">
+        <span class="fm-pill"><span class="fm-dot"></span> Local</span>
+      </div>
+    </header>
+
+    <main class="fm-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category=='error' else category }} alert-dismissible" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+  </div><!-- /.fm-main -->
+
+</div><!-- /.fm-shell -->
 
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+  function openSidebar() {
+    document.getElementById('fm-sidebar').classList.add('open');
+    document.getElementById('fm-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSidebar() {
+    document.getElementById('fm-sidebar').classList.remove('open');
+    document.getElementById('fm-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  // Close on Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeSidebar();
+  });
+</script>
 </body>
 </html>

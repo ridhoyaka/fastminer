@@ -3,34 +3,35 @@
 {% block page_title %}Predict{% endblock %}
 
 {% block content %}
-<!-- Info bar -->
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>🎯 Step 5 — Predict</h4>
-    <div class="d-flex gap-3 align-items-center">
+    <h4>Step 5 — Predict</h4>
+    <div class="fm-row" style="gap:8px;">
       {% if bundle.metadata %}
         <span class="badge badge-primary">{{ bundle.metadata.model_name }}</span>
       {% endif %}
-      <span class="badge badge-muted">threshold = {{ '%.2f'|format(threshold) }}</span>
+      <span class="badge badge-muted">threshold {{ '%.2f'|format(threshold) }}</span>
     </div>
   </div>
 </div>
 
-<div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+<div class="fm-grid-2">
 
   <!-- Manual -->
   <div class="fm-card">
-    <div class="fm-card-header"><h5>🖊 Manual prediction</h5></div>
+    <div class="fm-card-header"><h5>Manual prediction</h5></div>
     <div class="fm-card-body">
       <form method="post">
         <input type="hidden" name="mode" value="manual">
-        {% for f in features %}
-          <div class="mb-2">
-            <label class="form-label">{{ f }}</label>
-            <input class="form-control" name="{{ f }}" placeholder="Enter value">
-          </div>
-        {% endfor %}
-        <button class="btn btn-primary" type="submit">▶ Predict</button>
+        <div class="fm-feature-scroll mb-3">
+          {% for f in features %}
+            <div class="mb-2">
+              <label class="form-label">{{ f }}</label>
+              <input class="form-control" name="{{ f }}" placeholder="Enter value">
+            </div>
+          {% endfor %}
+        </div>
+        <button class="btn btn-primary" type="submit">Predict</button>
       </form>
 
       {% if result %}
@@ -38,7 +39,7 @@
         <div>
           <strong>Prediction:</strong> {{ result.prediction }}<br>
           <strong>Probability ({{ result.positive_label }}):</strong>
-          <span style="font-family:var(--mono);font-size:14px;">{{ '%.3f'|format(result.probability) }}</span><br>
+          <span class="mono">{{ '%.3f'|format(result.probability) }}</span><br>
           <strong>Threshold:</strong> {{ '%.2f'|format(result.threshold) }}
         </div>
       </div>
@@ -48,20 +49,21 @@
 
   <!-- Batch -->
   <div class="fm-card">
-    <div class="fm-card-header"><h5>📦 Batch prediction</h5></div>
+    <div class="fm-card-header"><h5>Batch prediction</h5></div>
     <div class="fm-card-body">
-      <p class="text-muted">Upload an unlabeled CSV / XLSX / JSON. Results downloaded as CSV.</p>
+      <p>Upload an unlabeled CSV, XLSX, or JSON file. Results are downloaded as a CSV.</p>
       <form action="{{ url_for('predict_batch') }}" method="post" enctype="multipart/form-data">
         <div class="mb-3">
-          <input class="form-control" type="file" name="file" accept=".csv,.xlsx,.xls,.json" required>
+          <input class="form-control" type="file" name="file"
+                 accept=".csv,.xlsx,.xls,.json" required>
         </div>
-        <button class="btn btn-primary" type="submit">⬆ Predict &amp; Download</button>
+        <button class="btn btn-primary" type="submit">Predict &amp; Download</button>
       </form>
-      <div class="small text-muted mt-2">Saved to <code>reports/</code> and logged in history.</div>
+      <p class="small text-muted mt-2 mb-0">Saved to <code>reports/</code> and logged in history.</p>
     </div>
   </div>
 
 </div>
 
-<a class="btn btn-outline btn-sm" href="{{ url_for('model_page') }}">🗂 Manage Models →</a>
+<a class="btn btn-outline btn-sm" href="{{ url_for('model_page') }}">Manage Models</a>
 {% endblock %}

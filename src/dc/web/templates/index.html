@@ -1,63 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Fast Miner — Home{% endblock %}
+{% block title %}Fast Miner{% endblock %}
 {% block page_title %}Home{% endblock %}
 
 {% block content %}
 <div class="fm-hero">
   <h1 class="fm-hero-title">Fast Miner</h1>
-  <p class="fm-hero-sub">Browser-based binary classification that works fully offline. All data stays on your machine.</p>
+  <p class="fm-hero-sub">Binary classification that runs entirely in your browser — no cloud, no uploads, fully offline.</p>
 </div>
 
 <div class="fm-feature-grid">
 
   <div class="fm-feature-card">
     <div class="fm-feature-step">1</div>
-    <div class="fm-feature-title">📂 Data</div>
-    <p class="fm-feature-desc">Upload CSV, XLSX, or JSON. Preview rows and pick your target &amp; positive class.</p>
-    <a class="btn btn-primary btn-sm" href="{{ url_for('data_page') }}">Go to Data →</a>
+    <div class="fm-feature-title">Data</div>
+    <p class="fm-feature-desc">Upload CSV, XLSX, or JSON. Preview rows and choose your target column and positive class.</p>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('data_page') }}">Go to Data</a>
   </div>
 
   <div class="fm-feature-card">
     <div class="fm-feature-step">2</div>
-    <div class="fm-feature-title">🔍 Explore</div>
-    <p class="fm-feature-desc">Inspect schema, missing values, class balance. Reports saved to <code>reports/</code>.</p>
-    <a class="btn btn-outline btn-sm" href="{{ url_for('explore') }}">Explore →</a>
+    <div class="fm-feature-title">Explore</div>
+    <p class="fm-feature-desc">Inspect schema, missing values, and class balance. Reports saved to <code>reports/</code>.</p>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('explore') }}">Explore</a>
   </div>
 
   <div class="fm-feature-card">
     <div class="fm-feature-step">3</div>
-    <div class="fm-feature-title">🧠 Train</div>
-    <p class="fm-feature-desc">Compare models with CV, optional search &amp; balanced weights. Saved to <code>models/</code>.</p>
-    <a class="btn btn-outline btn-sm" href="{{ url_for('train_page') }}">Train →</a>
+    <div class="fm-feature-title">Train</div>
+    <p class="fm-feature-desc">Compare models with cross-validation, optional hyperparameter search, and balanced weights.</p>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('train_page') }}">Train</a>
   </div>
 
   <div class="fm-feature-card">
     <div class="fm-feature-step">4</div>
-    <div class="fm-feature-title">📊 Evaluate &amp; Predict</div>
-    <p class="fm-feature-desc">Threshold tuning, metrics, manual prediction, and batch scoring.</p>
-    <div class="d-flex gap-2">
+    <div class="fm-feature-title">Evaluate &amp; Predict</div>
+    <p class="fm-feature-desc">Tune the decision threshold, view metrics, and run manual or batch predictions.</p>
+    <div class="fm-row" style="gap:6px;">
       <a class="btn btn-outline btn-sm" href="{{ url_for('evaluate_page') }}">Evaluate</a>
       <a class="btn btn-outline btn-sm" href="{{ url_for('predict_page') }}">Predict</a>
     </div>
   </div>
 
   <div class="fm-feature-card">
-    <div class="fm-feature-step" style="background:var(--bg-hover);color:var(--text-secondary);">★</div>
-    <div class="fm-feature-title">🕓 History</div>
-    <p class="fm-feature-desc">Review past training runs, inspections, and batch predictions.</p>
-    <a class="btn btn-outline btn-sm" href="{{ url_for('history_page') }}">View History →</a>
+    <div class="fm-feature-step muted">★</div>
+    <div class="fm-feature-title">History</div>
+    <p class="fm-feature-desc">Review all past training runs, inspections, and batch predictions.</p>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('history_page') }}">View History</a>
   </div>
 
   <div class="fm-feature-card">
-    <div class="fm-feature-step" style="background:var(--bg-hover);color:var(--text-secondary);">★</div>
-    <div class="fm-feature-title">🗂 Model Registry</div>
+    <div class="fm-feature-step muted">★</div>
+    <div class="fm-feature-title">Model Registry</div>
     <p class="fm-feature-desc">Browse and load saved models from <code>models/</code>.</p>
-    <a class="btn btn-outline btn-sm" href="{{ url_for('model_page') }}">Model Registry →</a>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('model_page') }}">Model Registry</a>
   </div>
 
 </div>
 
-<div style="margin-top:20px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text-muted);">
-  📁 Paths: <code>data/</code> uploads · <code>models/</code> saved models · <code>reports/</code> outputs · <code>.web_data/</code> history DB — all local, works offline.
-</div>
+<p class="small text-muted mt-3">
+  Paths: <code>data/uploads/</code> · <code>models/</code> · <code>reports/</code> · <code>.web_data/history.db</code>
+</p>
 {% endblock %}

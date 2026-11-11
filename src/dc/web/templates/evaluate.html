@@ -5,10 +5,10 @@
 {% block content %}
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>📊 Step 4 — Evaluate</h4>
-    <span class="badge badge-primary">
-      {{ bundle.metadata.model_name if bundle.metadata else 'No model loaded' }}
-    </span>
+    <h4>Step 4 — Evaluate</h4>
+    {% if bundle.metadata %}
+      <span class="badge badge-primary">{{ bundle.metadata.model_name }}</span>
+    {% endif %}
   </div>
   <div class="fm-card-body">
 
@@ -16,29 +16,29 @@
     <div class="fm-stat-grid mb-4">
       <div class="fm-stat-tile">
         <div class="fm-stat-label">Model</div>
-        <div class="fm-stat-value" style="font-size:14px;">{{ bundle.metadata.model_name }}</div>
+        <div class="fm-stat-value" style="font-size:13px; font-weight:600;">{{ bundle.metadata.model_name }}</div>
       </div>
       <div class="fm-stat-tile">
         <div class="fm-stat-label">Target</div>
-        <div class="fm-stat-value" style="font-size:14px;">{{ bundle.metadata.target }}</div>
+        <div class="fm-stat-value" style="font-size:13px; font-weight:600;">{{ bundle.metadata.target }}</div>
       </div>
       <div class="fm-stat-tile">
         <div class="fm-stat-label">Positive class</div>
-        <div class="fm-stat-value" style="font-size:14px;">{{ bundle.metadata.positive_label }}</div>
+        <div class="fm-stat-value" style="font-size:13px; font-weight:600;">{{ bundle.metadata.positive_label }}</div>
       </div>
     </div>
     {% endif %}
 
     <form method="post">
-      <div class="fm-section-title">Threshold tuning</div>
-      <div class="fm-range-row mb-3">
-        <label class="form-label mb-0" style="white-space:nowrap;">Decision threshold</label>
-        <input type="range" class="form-range" name="threshold"
-               min="0" max="1" step="0.01"
-               value="{{ '%.2f'|format(threshold) }}"
-               oninput="this.nextElementSibling.value=this.value"
-               style="flex:1;">
-        <output>{{ '%.2f'|format(threshold) }}</output>
+      <div class="mb-3">
+        <label class="form-label">Decision threshold</label>
+        <div class="fm-range-row">
+          <input type="range" class="form-range" name="threshold"
+                 min="0" max="1" step="0.01"
+                 value="{{ '%.2f'|format(threshold) }}"
+                 oninput="this.nextElementSibling.value=this.value">
+          <output>{{ '%.2f'|format(threshold) }}</output>
+        </div>
       </div>
 
       <label class="form-check mb-3">
@@ -46,24 +46,80 @@
         <span class="form-check-label">Evaluate on current loaded data (if labeled)</span>
       </label>
 
-      <button class="btn btn-primary" type="submit">▶ Update</button>
+      <button class="btn btn-primary" type="submit">Update</button>
     </form>
+
   </div>
 </div>
 
 {% if metrics %}
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>📈 Metrics</h4>
+    <h4>Evaluation Metrics</h4>
     <span class="badge badge-muted">threshold = {{ '%.2f'|format(metrics.threshold) }}</span>
   </div>
   <div class="fm-card-body">
-    <pre>{{ metrics | tojson(indent=2) }}</pre>
+    <div class="fm-stat-grid mb-4">
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Accuracy</div>
+        <div class="fm-stat-value text-accent">{{ '%.1f'|format(metrics.accuracy * 100) }}%</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Precision</div>
+        <div class="fm-stat-value">{{ '%.1f'|format(metrics.precision * 100) }}%</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Recall</div>
+        <div class="fm-stat-value">{{ '%.1f'|format(metrics.recall * 100) }}%</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">F1-Score</div>
+        <div class="fm-stat-value">{{ '%.3f'|format(metrics.f1) }}</div>
+      </div>
+      {% if metrics.roc_auc is not none %}
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">ROC AUC</div>
+        <div class="fm-stat-value">{{ '%.3f'|format(metrics.roc_auc) }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if metrics.confusion_matrix %}
+    <div class="fm-section-title">Confusion Matrix</div>
+    <div class="table-responsive mb-3" style="max-width:440px;">
+      <table class="table" style="text-align:center;">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Actual \ Predicted</th>
+            <th>Pred Negative (0)</th>
+            <th>Pred Positive (1)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th style="text-align:left; font-weight:600;">Actual Negative (0)</th>
+            <td><strong class="mono">{{ metrics.confusion_matrix[0][0] }}</strong> <span class="small text-muted">(TN)</span></td>
+            <td><strong class="mono">{{ metrics.confusion_matrix[0][1] }}</strong> <span class="small text-muted">(FP)</span></td>
+          </tr>
+          <tr>
+            <th style="text-align:left; font-weight:600;">Actual Positive (1)</th>
+            <td><strong class="mono">{{ metrics.confusion_matrix[1][0] }}</strong> <span class="small text-muted">(FN)</span></td>
+            <td><strong class="mono">{{ metrics.confusion_matrix[1][1] }}</strong> <span class="small text-muted">(TP)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <details class="mt-3">
+      <summary class="small text-muted" style="cursor:pointer; user-select:none;">Show raw metrics JSON</summary>
+      <pre class="mt-2">{{ metrics | tojson(indent=2) }}</pre>
+    </details>
   </div>
 </div>
 {% else %}
-<div class="alert alert-info">ℹ Adjust the threshold and click Update to compute metrics.</div>
+<div class="alert alert-info">Adjust the threshold and click Update to compute metrics.</div>
 {% endif %}
 
-<a class="btn btn-primary btn-sm" href="{{ url_for('predict_page') }}">Go to Predict →</a>
+<a class="btn btn-primary btn-sm" href="{{ url_for('predict_page') }}">Continue to Predict</a>
 {% endblock %}

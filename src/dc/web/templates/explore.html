@@ -5,10 +5,10 @@
 {% block content %}
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>🔍 Step 2 — Explore Dataset</h4>
+    <h4>Step 2 — Explore Dataset</h4>
   </div>
   <div class="fm-card-body">
-    <form method="post" class="d-flex align-items-center gap-3" style="flex-wrap:wrap;">
+    <form method="post" class="fm-row fm-form-inline" style="align-items:flex-end;">
       <div>
         <label class="form-label">Target column</label>
         <select class="form-select" name="target" style="min-width:200px;">
@@ -18,17 +18,16 @@
           {% endfor %}
         </select>
       </div>
-      <div style="padding-top:18px;">
-        <button class="btn btn-primary" type="submit">▶ Run Inspection</button>
+      <div>
+        <button class="btn btn-primary" type="submit">Run Inspection</button>
       </div>
     </form>
   </div>
 </div>
 
 {% if info %}
-<!-- Summary stats -->
 <div class="fm-card">
-  <div class="fm-card-header"><h4>📋 Summary</h4></div>
+  <div class="fm-card-header"><h4>Summary</h4></div>
   <div class="fm-card-body">
     <div class="fm-stat-grid mb-3">
       <div class="fm-stat-tile">
@@ -40,7 +39,7 @@
         <div class="fm-stat-value">{{ info.columns }}</div>
       </div>
       <div class="fm-stat-tile">
-        <div class="fm-stat-label">Duplicate rows</div>
+        <div class="fm-stat-label">Duplicates</div>
         <div class="fm-stat-value">{{ info.duplicate_rows }}</div>
       </div>
       <div class="fm-stat-tile">
@@ -49,48 +48,45 @@
       </div>
     </div>
 
-    <div class="small text-muted">
-      Binary candidates: 
+    <p class="small text-muted mb-0">
+      Binary candidates:
       {% for c in info.binary_target_candidates %}
         <span class="badge badge-primary">{{ c }}</span>
       {% else %}
         <em>none</em>
       {% endfor %}
-    </div>
+    </p>
 
     {% if info.target %}
-    <div style="margin-top:16px;">
-      <div class="fm-section-title">Target: {{ info.target }}</div>
-      <div class="d-flex flex-wrap gap-2">
+    <div class="mt-3">
+      <div class="fm-section-title">Class balance — {{ info.target }}</div>
+      <div class="fm-stat-grid">
         {% for c in info.class_balance.classes %}
-          <div class="fm-stat-tile" style="min-width:120px;">
+          <div class="fm-stat-tile">
             <div class="fm-stat-label">{{ c.label }}</div>
-            <div class="fm-stat-value" style="font-size:16px;">{{ c.count }}</div>
+            <div class="fm-stat-value" style="font-size:17px;">{{ c.count }}</div>
             <div class="fm-stat-sub">{{ c.pct }}%</div>
           </div>
         {% endfor %}
       </div>
       {% if info.class_balance.imbalanced %}
-        <div class="alert alert-warning mt-3">⚠ Target is imbalanced — consider enabling balanced class weights during training.</div>
+        <div class="alert alert-warning mt-3">
+          Target is imbalanced. Consider enabling balanced class weights during training.
+        </div>
       {% endif %}
     </div>
     {% endif %}
   </div>
 </div>
 
-<!-- Schema table -->
 <div class="fm-card">
-  <div class="fm-card-header"><h4>🗃 Column Schema</h4></div>
-  <div class="fm-card-body" style="padding:0;">
+  <div class="fm-card-header"><h4>Column Schema</h4></div>
+  <div class="fm-card-body p-0">
     <div class="table-responsive">
       <table class="table">
         <thead>
           <tr>
-            <th>Column</th>
-            <th>Type</th>
-            <th>Kind</th>
-            <th>Missing %</th>
-            <th>Unique</th>
+            <th>Column</th><th>Type</th><th>Kind</th><th>Missing %</th><th>Unique</th>
           </tr>
         </thead>
         <tbody>
@@ -98,7 +94,9 @@
             <tr>
               <td>
                 {{ col.name }}
-                {% if col.is_target %}<span class="badge badge-primary" style="margin-left:6px;">target</span>{% endif %}
+                {% if col.is_target %}
+                  <span class="badge badge-primary" style="margin-left:4px;">target</span>
+                {% endif %}
               </td>
               <td><code>{{ col.dtype }}</code></td>
               <td>{{ col.kind }}</td>
@@ -108,7 +106,7 @@
                 {% elif col.missing_pct > 0 %}
                   <span class="text-warning">{{ col.missing_pct }}%</span>
                 {% else %}
-                  <span class="text-success">0%</span>
+                  <span class="text-muted">0%</span>
                 {% endif %}
               </td>
               <td>{{ col.unique }}</td>
@@ -120,9 +118,49 @@
   </div>
 </div>
 
-<div class="d-flex align-items-center gap-3">
+{% if info.numeric_summary %}
+<div class="fm-card">
+  <div class="fm-card-header"><h4>Numeric Summary</h4></div>
+  <div class="fm-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Column</th>
+            <th>Count</th>
+            <th>Mean</th>
+            <th>Std</th>
+            <th>Min</th>
+            <th>25%</th>
+            <th>50%</th>
+            <th>75%</th>
+            <th>Max</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for col_name, stats in info.numeric_summary.items() %}
+            <tr>
+              <td><span class="mono fw-600">{{ col_name }}</span></td>
+              <td>{{ stats['count'] }}</td>
+              <td>{{ stats['mean'] }}</td>
+              <td>{{ stats['std'] }}</td>
+              <td>{{ stats['min'] }}</td>
+              <td>{{ stats['25%'] }}</td>
+              <td>{{ stats['50%'] }}</td>
+              <td>{{ stats['75%'] }}</td>
+              <td>{{ stats['max'] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="fm-row-between">
   <span class="small text-muted">Reports saved to <code>reports/</code></span>
-  <a class="btn btn-primary btn-sm" href="{{ url_for('train_page') }}">Go to Train →</a>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('train_page') }}">Continue to Train</a>
 </div>
 {% endif %}
 {% endblock %}

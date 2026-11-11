@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Train - Fast Miner{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-10 mx-auto">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h4 class="card-title">3. Train</h4>
+        <form method="post">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Target column</label>
+              <select class="form-select" name="target" required>
+                {% for col in columns %}
+                  <option value="{{ col }}" {% if col == selected_target %}selected{% endif %}>
+                    {{ col }}{% if col in binary_columns %} (binary){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+              <div class="form-text">Choose a column with exactly two classes.</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Positive class (optional)</label>
+              <input class="form-control" name="positive_label" placeholder="e.g. True/1/approved">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Exclude columns</label>
+              <select class="form-select" name="exclude" multiple size="4">
+                {% for col in columns %}
+                  <option value="{{ col }}">{{ col }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">Hold Ctrl/Cmd to select multiple</div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Test size</label>
+              <input class="form-control" name="test_size" value="0.2">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">CV folds</label>
+              <input class="form-control" name="cv_folds" value="5">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Random seed</label>
+              <input class="form-control" name="seed" value="42">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Scoring</label>
+              <select class="form-select" name="scoring">
+                <option value="f1_macro">f1_macro</option>
+                <option value="roc_auc">roc_auc</option>
+                <option value="accuracy">accuracy</option>
+                <option value="balanced_accuracy">balanced_accuracy</option>
+                <option value="precision">precision</option>
+                <option value="recall">recall</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Candidate models</label>
+              <div class="d-flex flex-wrap gap-3">
+                {% for key, label in model_labels.items() %}
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="models" value="{{ key }}" id="m_{{ key }}" checked>
+                    <label class="form-check-label" for="m_{{ key }}">{{ label }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="balanced" id="balanced">
+                <label class="form-check-label" for="balanced">Balanced class weights</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="search" id="search">
+                <label class="form-check-label" for="search">Tune hyperparameters (random search)</label>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary mt-3" type="submit">Start Training</button>
+        </form>
+        <div class="small text-muted mt-2">Models saved to <code>models/</code>, runs recorded in <code>.web_data/history.db</code></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

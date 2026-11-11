@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Fast Miner{% endblock %}</title>
+  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+  <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+  <style>
+    body { background: #f8f9fa; }
+    .nav-link.active { font-weight: 600; }
+    pre { background: #f1f3f5; padding: 10px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="{{ url_for('index') }}">Fast Miner</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('data_page') }}">Data</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('explore') }}">Explore</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('train_page') }}">Train</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('evaluate_page') }}">Evaluate</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('predict_page') }}">Predict</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('model_page') }}">Model</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('history_page') }}">History</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('storage_page') }}">Storage</a></li>
+      </ul>
+      <span class="navbar-text small">Offline • Local paths documented</span>
+    </div>
+  </div>
+</nav>
+<main class="container mb-5">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='error' else category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

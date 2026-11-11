@@ -1,0 +1,992 @@
+"""Web interface for Fast Miner with persistent history."""
+
+from __future__ import annotations
+
+import json
+import os
+import queue
+import sqlite3
+import threading
+import time
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pandas as pd
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
+)
+from werkzeug.utils import secure_filename
+
+from dc.eda import inspect_dataframe, save_report
+from dc.evaluate import compute_metrics
+from dc.io import find_binary_targets, load_dataframe, save_dataframe
+from dc.models import MODEL_LABELS
+from dc.predict import predict_frame, predict_probabilities, predict_record
+from dc.train import TrainConfig, TrainResult, load_bundle, save_result, train_model
+
+app = Flask(__name__, template_folder="templates", static_folder="static")
+app.secret_key = os.environ.get("FM_SECRET_KEY") or "fastminer-dev-key-change-in-production"
+app.config["MAX_CONTENT_LENGTH"] = 256 * 1024 * 1024  # 256MB
+
+UPLOAD_DIR = Path(os.environ.get("DC_UPLOAD_DIR", Path("data") / "uploads"))
+MODELS_DIR = Path(os.environ.get("DC_MODELS_DIR", "models"))
+REPORTS_DIR = Path(os.environ.get("DC_REPORTS_DIR", "reports"))
+DB_PATH = Path(os.environ.get("DC_DB_PATH", Path(".web_data") / "history.db"))
+for _directory in (UPLOAD_DIR, MODELS_DIR, REPORTS_DIR, DB_PATH.parent):
+    _directory.mkdir(parents=True, exist_ok=True)
+
+app.config["UPLOAD_FOLDER"] = str(UPLOAD_DIR)
+
+FILE_TYPES = {".csv", ".xlsx", ".xls", ".json"}
+MODEL_SUFFIXES = {".joblib", ".json"}
+REPORT_SUFFIXES = {".md", ".json"}
+
+training_jobs: dict[str, dict[str, Any]] = {}
+training_queues: dict[str, queue.Queue] = {}
+
+
+def choose_default_target(frame: pd.DataFrame, preferred: str | None = None) -> str | None:
+    """Pick a sensible binary target for the training form."""
+    columns = [str(column) for column in frame.columns]
+    if not columns:
+        return None
+    binary = set(find_binary_targets(frame))
+    if preferred is not None and str(preferred) in binary:
+        return str(preferred)
+    last = columns[-1]
+    if last in binary:
+        return last
+    binary_columns = [column for column in columns if column in binary]
+    if binary_columns:
+        return binary_columns[-1]
+    return last
+
+
+def get_db():
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runs (
+            id TEXT PRIMARY KEY,
+            type TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            data_file TEXT,
+            model_path TEXT,
+            target TEXT,
+            positive_label TEXT,
+            config_json TEXT,
+            result_json TEXT,
+            metadata_json TEXT,
+            notes TEXT
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS predictions (
+            id TEXT PRIMARY KEY,
+            run_id TEXT,
+            type TEXT NOT NULL,
+            input_file TEXT,
+            output_file TEXT,
+            model_path TEXT,
+            threshold REAL,
+            count INTEGER,
+            created_at TEXT NOT NULL,
+            result_json TEXT,
+            FOREIGN KEY(run_id) REFERENCES runs(id)
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS inspections (
+            id TEXT PRIMARY KEY,
+            data_file TEXT,
+            target TEXT,
+            report_md TEXT,
+            report_json TEXT,
+            summary_json TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+init_db()
+
+
+def save_run(run_data: dict[str, Any]) -> str:
+    run_id = run_data.get("id") or str(uuid.uuid4())
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT OR REPLACE INTO runs (id, type, status, created_at, updated_at, data_file, model_path, target, positive_label, config_json, result_json, metadata_json, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            run_id,
+            run_data.get("type", "train"),
+            run_data.get("status", "completed"),
+            run_data.get("created_at", datetime.now().isoformat()),
+            run_data.get("updated_at", datetime.now().isoformat()),
+            run_data.get("data_file"),
+            run_data.get("model_path"),
+            run_data.get("target"),
+            run_data.get("positive_label"),
+            json.dumps(run_data.get("config")) if run_data.get("config") else None,
+            json.dumps(run_data.get("result")) if run_data.get("result") else None,
+            json.dumps(run_data.get("metadata")) if run_data.get("metadata") else None,
+            run_data.get("notes"),
+        ),
+    )
+    conn.commit()
+    conn.close()
+    return run_id
+
+
+def get_runs(limit: int = 100) -> list[dict[str, Any]]:
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM runs ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return rows
+
+
+def get_run(run_id: str) -> dict[str, Any] | None:
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM runs WHERE id = ?", (run_id,))
+    row = cur.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def _format_size(size: int) -> str:
+    value = float(size)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if value < 1024 or unit == "TB":
+            if unit == "B":
+                return f"{int(value)} B"
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{int(size)} B"
+
+
+def _safe_child(base: Path, name: str | None) -> Path | None:
+    if not name:
+        return None
+    candidate = Path(name)
+    if candidate.is_absolute() or candidate.name != name:
+        return None
+    base_resolved = base.resolve()
+    target = base / name
+    try:
+        if target.resolve().parent != base_resolved:
+            return None
+    except OSError:
+        return None
+    return target
+
+
+def _artifact_in_dir(base: Path, value: str | Path | None) -> Path | None:
+    if not value:
+        return None
+    path = Path(value)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    try:
+        resolved = path.resolve()
+        if resolved.parent != base.resolve():
+            return None
+    except OSError:
+        return None
+    return resolved
+
+
+def _path_variants(path: Path) -> tuple[str, ...]:
+    values = [str(path)]
+    try:
+        resolved = str(path.resolve())
+    except OSError:
+        resolved = ""
+    if resolved and resolved not in values:
+        values.append(resolved)
+    return tuple(values)
+
+
+def _session_matches(key: str, path: Path) -> bool:
+    stored = session.get(key)
+    if not stored:
+        return False
+    try:
+        return Path(stored).resolve() == path.resolve()
+    except OSError:
+        return str(stored) == str(path)
+
+
+def _clear_loaded_file_session() -> None:
+    for key in ("current_file", "current_columns", "current_shape", "current_preview", "target"):
+        session.pop(key, None)
+
+
+def _clear_loaded_model_session() -> None:
+    for key in ("current_bundle", "current_model_path", "current_run_id"):
+        session.pop(key, None)
+
+
+def _load_current_bundle() -> dict[str, Any] | None:
+    """Reload the active model from disk instead of the JSON session cookie."""
+    path = session.get("current_model_path")
+    if not path:
+        return None
+    try:
+        return load_bundle(path)
+    except Exception:
+        return None
+
+
+def _remove_file(path: Path) -> None:
+    try:
+        if path.is_file():
+            path.unlink()
+    except OSError:
+        pass
+
+
+def _remove_report_files(path: Path) -> None:
+    if path.suffix.lower() in REPORT_SUFFIXES:
+        _remove_file(path.with_suffix(".md"))
+        _remove_file(path.with_suffix(".json"))
+    else:
+        _remove_file(path)
+
+
+def _entry(name: str, paths: list[Path]) -> dict[str, Any]:
+    total = 0
+    latest = 0.0
+    for path in paths:
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        total += stat.st_size
+        latest = max(latest, stat.st_mtime)
+    modified = datetime.fromtimestamp(latest).strftime("%Y-%m-%d %H:%M:%S") if latest else ""
+    return {
+        "name": name,
+        "files": [path.name for path in paths],
+        "size": total,
+        "size_text": _format_size(total),
+        "mtime": modified,
+        "mtime_raw": latest,
+    }
+
+
+def list_uploads() -> list[dict[str, Any]]:
+    entries = [
+        _entry(path.name, [path])
+        for path in UPLOAD_DIR.iterdir()
+        if path.is_file() and path.name != ".gitkeep"
+    ]
+    entries.sort(key=lambda item: item["mtime_raw"], reverse=True)
+    return entries
+
+
+def list_models() -> list[dict[str, Any]]:
+    groups: dict[str, list[Path]] = {}
+    for path in MODELS_DIR.iterdir():
+        if path.is_file() and path.suffix.lower() in MODEL_SUFFIXES:
+            groups.setdefault(path.stem, []).append(path)
+    entries = []
+    for paths in groups.values():
+        paths.sort(key=lambda path: (path.suffix.lower() != ".joblib", path.name))
+        entries.append(_entry(paths[0].name, paths))
+    entries.sort(key=lambda item: item["mtime_raw"], reverse=True)
+    return entries
+
+
+def list_reports() -> list[dict[str, Any]]:
+    groups: dict[str, list[Path]] = {}
+    for path in REPORTS_DIR.iterdir():
+        if path.is_file() and path.name != ".gitkeep":
+            groups.setdefault(path.stem, []).append(path)
+    entries = []
+    for paths in groups.values():
+        paths.sort(key=lambda path: (path.suffix.lower() != ".md", path.name))
+        entries.append(_entry(paths[0].name, paths))
+    entries.sort(key=lambda item: item["mtime_raw"], reverse=True)
+    return entries
+
+
+def history_counts() -> dict[str, int]:
+    counts: dict[str, int] = {}
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        for table in ("runs", "predictions", "inspections"):
+            cur.execute(f"SELECT COUNT(*) FROM {table}")
+            counts[table] = int(cur.fetchone()[0])
+    finally:
+        conn.close()
+    return counts
+
+
+def delete_upload(name: str | None) -> bool:
+    path = _safe_child(UPLOAD_DIR, name)
+    if path is None or not path.is_file():
+        return False
+    variants = _path_variants(path)
+    placeholders = ",".join("?" for _ in variants)
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT report_md, report_json FROM inspections WHERE data_file IN ({placeholders})",
+            variants,
+        )
+        for row in cur.fetchall():
+            for value in (row["report_md"], row["report_json"]):
+                report_path = _artifact_in_dir(REPORTS_DIR, value)
+                if report_path is not None:
+                    _remove_report_files(report_path)
+        cur.execute(
+            f"SELECT output_file FROM predictions WHERE input_file IN ({placeholders})",
+            variants,
+        )
+        for row in cur.fetchall():
+            output_path = _artifact_in_dir(REPORTS_DIR, row["output_file"])
+            if output_path is not None:
+                _remove_file(output_path)
+        cur.execute(f"DELETE FROM inspections WHERE data_file IN ({placeholders})", variants)
+        cur.execute(f"DELETE FROM predictions WHERE input_file IN ({placeholders})", variants)
+        cur.execute(f"DELETE FROM runs WHERE data_file IN ({placeholders})", variants)
+        conn.commit()
+    finally:
+        conn.close()
+    _remove_file(path)
+    if _session_matches("current_file", path):
+        _clear_loaded_file_session()
+    return True
+
+
+def delete_model(name: str | None) -> bool:
+    path = _safe_child(MODELS_DIR, name)
+    if path is None or path.suffix.lower() not in MODEL_SUFFIXES:
+        return False
+    model_path = path.with_suffix(".joblib")
+    metadata_path = path.with_suffix(".json")
+    if not model_path.exists() and not metadata_path.exists():
+        return False
+    variants = _path_variants(model_path)
+    placeholders = ",".join("?" for _ in variants)
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT output_file FROM predictions WHERE model_path IN ({placeholders})",
+            variants,
+        )
+        for row in cur.fetchall():
+            output_path = _artifact_in_dir(REPORTS_DIR, row["output_file"])
+            if output_path is not None:
+                _remove_file(output_path)
+        cur.execute(f"DELETE FROM predictions WHERE model_path IN ({placeholders})", variants)
+        cur.execute(f"DELETE FROM runs WHERE model_path IN ({placeholders})", variants)
+        conn.commit()
+    finally:
+        conn.close()
+    _remove_file(model_path)
+    _remove_file(metadata_path)
+    if _session_matches("current_model_path", model_path):
+        _clear_loaded_model_session()
+    return True
+
+
+def delete_report(name: str | None) -> bool:
+    path = _safe_child(REPORTS_DIR, name)
+    if path is None or path.name == ".gitkeep":
+        return False
+    if path.suffix.lower() in REPORT_SUFFIXES:
+        targets = [path.with_suffix(".md"), path.with_suffix(".json")]
+    else:
+        targets = [path]
+    if not any(target.exists() for target in targets):
+        return False
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        for target in targets:
+            variants = _path_variants(target)
+            placeholders = ",".join("?" for _ in variants)
+            cur.execute(
+                f"DELETE FROM inspections WHERE report_md IN ({placeholders}) OR report_json IN ({placeholders})",
+                variants + variants,
+            )
+            cur.execute(
+                f"DELETE FROM predictions WHERE output_file IN ({placeholders})",
+                variants,
+            )
+        conn.commit()
+    finally:
+        conn.close()
+    for target in targets:
+        _remove_file(target)
+    return True
+
+
+def clear_uploads() -> int:
+    removed = 0
+    for entry in list_uploads():
+        if delete_upload(entry["name"]):
+            removed += 1
+    _clear_loaded_file_session()
+    return removed
+
+
+def clear_models() -> int:
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT output_file FROM predictions")
+        for row in cur.fetchall():
+            output_path = _artifact_in_dir(REPORTS_DIR, row["output_file"])
+            if output_path is not None:
+                _remove_file(output_path)
+        cur.execute("DELETE FROM predictions")
+        cur.execute("DELETE FROM runs")
+        conn.commit()
+    finally:
+        conn.close()
+    removed = 0
+    for path in MODELS_DIR.iterdir():
+        if path.is_file() and path.suffix.lower() in MODEL_SUFFIXES:
+            _remove_file(path)
+            removed += 1
+    _clear_loaded_model_session()
+    return removed
+
+
+def clear_reports() -> int:
+    removed = 0
+    for path in REPORTS_DIR.iterdir():
+        if path.is_file() and path.name != ".gitkeep":
+            _remove_file(path)
+            removed += 1
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM predictions")
+        cur.execute("DELETE FROM inspections")
+        conn.commit()
+    finally:
+        conn.close()
+    return removed
+
+
+def clear_history() -> None:
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM runs")
+        cur.execute("DELETE FROM predictions")
+        cur.execute("DELETE FROM inspections")
+        conn.commit()
+        try:
+            conn.execute("VACUUM")
+        except sqlite3.OperationalError:
+            pass
+    finally:
+        conn.close()
+
+
+def clear_all() -> int:
+    removed = clear_uploads()
+    removed += clear_models()
+    removed += clear_reports()
+    clear_history()
+    _clear_loaded_file_session()
+    _clear_loaded_model_session()
+    return removed
+
+
+@app.route("/")
+def index():
+    return render_template("index.html", model_labels=MODEL_LABELS)
+
+
+@app.route("/data")
+def data_page():
+    return render_template("data.html", model_labels=MODEL_LABELS)
+
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    if "file" not in request.files:
+        flash("No file uploaded", "error")
+        return redirect(url_for("data_page"))
+    f = request.files["file"]
+    if f.filename == "":
+        flash("No file selected", "error")
+        return redirect(url_for("data_page"))
+    ext = Path(f.filename).suffix.lower()
+    if ext not in FILE_TYPES:
+        flash("Unsupported file type. Use CSV, XLSX, or JSON.", "error")
+        return redirect(url_for("data_page"))
+    filename = secure_filename(f.filename)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    saved_name = f"{timestamp}_{filename}"
+    path = UPLOAD_DIR / saved_name
+    f.save(path)
+    try:
+        frame = load_dataframe(str(path))
+    except Exception as e:
+        flash(f"Failed to load file: {e}", "error")
+        return redirect(url_for("data_page"))
+    binary_candidates = find_binary_targets(frame)
+    session["current_file"] = str(path)
+    session["current_columns"] = list(frame.columns)
+    session["target"] = choose_default_target(frame)
+    preview = frame.head(100).to_dict(orient="records")
+    flash(f"Loaded {filename} ({frame.shape[0]} rows × {frame.shape[1]} columns)", "success")
+    return render_template(
+        "data.html",
+        model_labels=MODEL_LABELS,
+        filename=filename,
+        shape=frame.shape,
+        columns=list(frame.columns),
+        preview=preview,
+        binary_candidates=binary_candidates,
+    )
+
+
+@app.route("/explore", methods=["GET", "POST"])
+def explore():
+    if "current_file" not in session:
+        flash("Load a data file first.", "error")
+        return redirect(url_for("data_page"))
+    path = session["current_file"]
+    frame = load_dataframe(path)
+    target = request.form.get("target") or session.get("target")
+    info = inspect_dataframe(frame, target)
+    if target:
+        session["target"] = target
+    # save inspection
+    try:
+        md_path = REPORTS_DIR / f"inspection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        json_path, _ = save_report(info, str(md_path.with_suffix("")))
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO inspections (id, data_file, target, report_md, report_json, summary_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                str(uuid.uuid4()),
+                path,
+                target,
+                str(md_path),
+                str(json_path),
+                json.dumps(info),
+                datetime.now().isoformat(),
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+    return render_template("explore.html", info=info, target=target, model_labels=MODEL_LABELS)
+
+
+@app.route("/train", methods=["GET", "POST"])
+def train_page():
+    if "current_file" not in session:
+        flash("Load a data file first.", "error")
+        return redirect(url_for("data_page"))
+    path = session["current_file"]
+    frame = load_dataframe(path)
+    columns = session.get("current_columns", [])
+    binary_columns = find_binary_targets(frame)
+    if request.method == "GET":
+        selected_target = choose_default_target(frame, session.get("target"))
+        session["target"] = selected_target
+        return render_template(
+            "train.html",
+            columns=columns,
+            selected_target=selected_target,
+            binary_columns=binary_columns,
+            model_labels=MODEL_LABELS,
+        )
+    # start training
+    target = request.form.get("target")
+    positive_label = request.form.get("positive_label") or None
+    exclude = request.form.getlist("exclude")
+    models = request.form.getlist("models") or list(MODEL_LABELS.keys())
+    test_size = float(request.form.get("test_size", 0.2))
+    cv_folds = int(request.form.get("cv_folds", 5))
+    seed = int(request.form.get("seed", 42))
+    balanced = request.form.get("balanced") == "on"
+    search = request.form.get("search") == "on"
+    scoring = request.form.get("scoring", "f1_macro")
+    if not target:
+        flash("Select a target column", "error")
+        return render_template(
+            "train.html",
+            columns=columns,
+            selected_target=None,
+            binary_columns=binary_columns,
+            model_labels=MODEL_LABELS,
+        )
+    if target not in binary_columns:
+        if target not in frame.columns:
+            message = f"Target column '{target}' was not found in the uploaded file."
+        else:
+            class_count = int(frame[target].dropna().nunique())
+            message = (
+                f"Target '{target}' has {class_count} classes; binary classification needs exactly 2."
+            )
+            if binary_columns:
+                message += f" Choose a binary column such as '{binary_columns[-1]}'."
+            else:
+                message += " No binary columns were detected in this file."
+        flash(message, "error")
+        return render_template(
+            "train.html",
+            columns=columns,
+            selected_target=target,
+            binary_columns=binary_columns,
+            model_labels=MODEL_LABELS,
+        )
+    session["target"] = target
+    config = TrainConfig(
+        target=target,
+        positive_label=positive_label,
+        exclude=exclude,
+        test_size=test_size,
+        cv_folds=cv_folds,
+        seed=seed,
+        models=models,
+        class_weight="balanced" if balanced else None,
+        search=search,
+        scoring=scoring,
+    )
+    job_id = str(uuid.uuid4())
+    q = queue.Queue()
+    training_queues[job_id] = q
+    training_jobs[job_id] = {"status": "running", "progress": []}
+
+    def worker():
+        try:
+            def progress(msg, frac):
+                q.put(("progress", msg, frac))
+
+            result = train_model(frame, config, progress=progress)
+            q.put(("result", result))
+        except Exception as e:
+            q.put(("error", str(e)))
+
+    threading.Thread(target=worker, daemon=True).start()
+    session["current_job"] = job_id
+    session["target"] = target
+    return render_template("train_progress.html", job_id=job_id, model_labels=MODEL_LABELS)
+
+
+@app.route("/train/status/<job_id>")
+def train_status(job_id):
+    q = training_queues.get(job_id)
+    if not q:
+        return jsonify({"status": "not_found"})
+    messages = []
+    try:
+        while True:
+            messages.append(q.get_nowait())
+    except queue.Empty:
+        pass
+    if not messages:
+        return jsonify({"status": "running", "messages": []})
+    for msg in messages:
+        if msg[0] == "result":
+            result: TrainResult = msg[1]
+            try:
+                out_path = MODELS_DIR / f"model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.joblib"
+                saved = save_result(result, str(out_path))
+                run_id = save_run(
+                    {
+                        "type": "train",
+                        "status": "completed",
+                        "data_file": session.get("current_file"),
+                        "model_path": str(saved),
+                        "target": result.metadata.get("target"),
+                        "positive_label": str(result.metadata.get("positive_label")),
+                        "config": {
+                            "test_size": result.metadata.get("test_size"),
+                            "cv_folds": result.metadata.get("cv_folds"),
+                            "scoring": result.metadata.get("scoring"),
+                        },
+                        "result": {
+                            "model_name": result.model_name,
+                            "test_metrics": result.test_metrics,
+                            "leaderboard": result.leaderboard,
+                        },
+                        "metadata": result.metadata,
+                    }
+                )
+            except Exception as e:
+                return jsonify(
+                    {"status": "error", "error": f"Training finished but saving failed: {e}"}
+                )
+            session["current_model_path"] = str(saved)
+            session["current_run_id"] = run_id
+            session.pop("current_bundle", None)
+            return jsonify({"status": "done", "redirect": url_for("evaluate_page")})
+        elif msg[0] == "error":
+            return jsonify({"status": "error", "error": msg[1]})
+        elif msg[0] == "progress":
+            pass
+    return jsonify({"status": "running", "messages": messages})
+
+
+@app.route("/evaluate", methods=["GET", "POST"])
+def evaluate_page():
+    bundle = _load_current_bundle()
+    if not bundle:
+        flash("Train or load a model first.", "error")
+        return redirect(url_for("train_page"))
+    threshold = float(request.form.get("threshold", bundle.get("metadata", {}).get("threshold", 0.5))) if request.method == "POST" else float(bundle.get("metadata", {}).get("threshold", 0.5))
+    session["threshold"] = threshold
+    metrics = None
+    # try to evaluate on current file if labeled
+    if "current_file" in session and request.method == "POST" and request.form.get("evaluate_on_current"):
+        try:
+            frame = load_dataframe(session["current_file"])
+            metadata = bundle.get("metadata", {})
+            target = metadata.get("target")
+            if target and target in frame.columns:
+                positive = metadata.get("positive_label")
+                clean = frame.dropna(subset=[target])
+                y = clean[target].map(lambda v: 1 if (v == positive or str(v) == str(positive)) else 0).to_numpy()
+                if len(np.unique(y)) >= 2:
+                    probs = predict_probabilities(bundle, clean)
+                    metrics = compute_metrics(y, probs, threshold)
+        except Exception as e:
+            flash(f"Evaluation failed: {e}", "error")
+    return render_template("evaluate.html", bundle=bundle, threshold=threshold, metrics=metrics, model_labels=MODEL_LABELS)
+
+
+@app.route("/predict", methods=["GET", "POST"])
+def predict_page():
+    bundle = _load_current_bundle()
+    if not bundle:
+        flash("Train or load a model first.", "error")
+        return redirect(url_for("train_page"))
+    features = bundle.get("metadata", {}).get("feature_columns", [])
+    threshold = float(session.get("threshold", bundle.get("metadata", {}).get("threshold", 0.5)))
+    result = None
+    if request.method == "POST" and request.form.get("mode") == "manual":
+        record = {}
+        for f in features:
+            record[f] = request.form.get(f)
+        try:
+            result = predict_record(bundle, record, threshold=threshold)
+        except Exception as e:
+            flash(f"Prediction failed: {e}", "error")
+    return render_template("predict.html", bundle=bundle, features=features, threshold=threshold, result=result, model_labels=MODEL_LABELS)
+
+
+@app.route("/predict/batch", methods=["POST"])
+def predict_batch():
+    bundle = _load_current_bundle()
+    if not bundle:
+        flash("Train or load a model first.", "error")
+        return redirect(url_for("predict_page"))
+    if "file" not in request.files:
+        flash("No file uploaded", "error")
+        return redirect(url_for("predict_page"))
+    f = request.files["file"]
+    ext = Path(f.filename).suffix.lower()
+    if ext not in FILE_TYPES:
+        flash("Unsupported file type", "error")
+        return redirect(url_for("predict_page"))
+    filename = secure_filename(f.filename)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    saved_name = f"batch_{timestamp}_{filename}"
+    path = UPLOAD_DIR / saved_name
+    f.save(path)
+    frame = load_dataframe(str(path))
+    threshold = float(session.get("threshold", bundle.get("metadata", {}).get("threshold", 0.5)))
+    try:
+        out = predict_frame(bundle, frame, threshold=threshold)
+    except Exception as e:
+        flash(f"Batch prediction failed: {e}", "error")
+        return redirect(url_for("predict_page"))
+    out_path = REPORTS_DIR / f"predictions_{timestamp}.csv"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    save_dataframe(out, str(out_path))
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO predictions (id, type, input_file, output_file, model_path, threshold, count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (str(uuid.uuid4()), "batch", str(path), str(out_path), session.get("current_model_path"), threshold, len(out), datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+    return send_file(str(out_path), as_attachment=True, download_name=out_path.name)
+
+
+@app.route("/model")
+def model_page():
+    bundle = _load_current_bundle()
+    models = []
+    for p in MODELS_DIR.glob("*.joblib"):
+        models.append({"path": str(p), "name": p.name, "mtime": datetime.fromtimestamp(p.stat().st_mtime).isoformat()})
+    models.sort(key=lambda x: x["mtime"], reverse=True)
+    return render_template("model.html", bundle=bundle, models=models, model_labels=MODEL_LABELS)
+
+
+@app.route("/model/load", methods=["POST"])
+def model_load():
+    path = request.form.get("path")
+    if not path or not Path(path).exists():
+        flash("Model not found", "error")
+        return redirect(url_for("model_page"))
+    try:
+        load_bundle(path)
+    except Exception as e:
+        flash(f"Failed to load model: {e}", "error")
+    else:
+        session["current_model_path"] = path
+        session.pop("current_bundle", None)
+        flash(f"Loaded model {Path(path).name}", "success")
+    return redirect(url_for("predict_page"))
+
+
+@app.route("/history")
+def history_page():
+    runs = get_runs(200)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM predictions ORDER BY created_at DESC LIMIT 100")
+    preds = [dict(r) for r in cur.fetchall()]
+    cur.execute("SELECT * FROM inspections ORDER BY created_at DESC LIMIT 100")
+    insps = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return render_template("history.html", runs=runs, predictions=preds, inspections=insps, model_labels=MODEL_LABELS)
+
+
+@app.route("/storage")
+def storage_page():
+    uploads = list_uploads()
+    models = list_models()
+    reports = list_reports()
+    counts = history_counts()
+    uploads_size = sum(item["size"] for item in uploads)
+    models_size = sum(item["size"] for item in models)
+    reports_size = sum(item["size"] for item in reports)
+    db_size = DB_PATH.stat().st_size if DB_PATH.exists() else 0
+    total_size = uploads_size + models_size + reports_size + db_size
+    return render_template(
+        "storage.html",
+        uploads=uploads,
+        models=models,
+        reports=reports,
+        counts=counts,
+        uploads_size=_format_size(uploads_size),
+        models_size=_format_size(models_size),
+        reports_size=_format_size(reports_size),
+        db_size=_format_size(db_size),
+        total_size=_format_size(total_size),
+        model_labels=MODEL_LABELS,
+    )
+
+
+@app.route("/storage/delete", methods=["POST"])
+def storage_delete():
+    kind = request.form.get("kind")
+    name = request.form.get("name")
+    deleted = False
+    if kind == "upload":
+        deleted = delete_upload(name)
+        label = "Uploaded file"
+    elif kind == "model":
+        deleted = delete_model(name)
+        label = "Model"
+    elif kind == "report":
+        deleted = delete_report(name)
+        label = "Report"
+    else:
+        label = "Item"
+    if deleted:
+        flash(f"{label} deleted.", "success")
+    else:
+        flash(f"{label} could not be deleted.", "error")
+    if request.form.get("return_to") == "model":
+        return redirect(url_for("model_page"))
+    return redirect(url_for("storage_page"))
+
+
+@app.route("/storage/clear", methods=["POST"])
+def storage_clear():
+    scope = request.form.get("scope")
+    if scope == "uploads":
+        removed = clear_uploads()
+        flash(f"Deleted {removed} uploaded file(s) and related history.", "success")
+    elif scope == "models":
+        removed = clear_models()
+        flash(f"Deleted {removed} model file(s) and related history.", "success")
+    elif scope == "reports":
+        removed = clear_reports()
+        flash(f"Deleted {removed} report file(s) and related history.", "success")
+    elif scope == "history":
+        clear_history()
+        flash("History cleared.", "success")
+    elif scope == "all":
+        removed = clear_all()
+        flash(f"Deleted {removed} artifact file(s) and cleared history.", "success")
+    else:
+        flash("Unknown cleanup option.", "error")
+    return redirect(url_for("storage_page"))
+
+
+@app.route("/api/progress/<job_id>")
+def api_progress(job_id):
+    return train_status(job_id)
+
+
+def main():
+    port = int(os.environ.get("PORT", 5000))
+    host = os.environ.get("HOST", "127.0.0.1")
+    import threading
+    import webbrowser
+
+    def open_browser():
+        time.sleep(1.5)
+        webbrowser.open(f"http://{host}:{port}/")
+
+    threading.Thread(target=open_browser, daemon=True).start()
+    app.run(host=host, port=port, threaded=True, debug=False)
+
+
+if __name__ == "__main__":
+    main()

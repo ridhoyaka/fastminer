@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}History - Fast Miner{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-11 mx-auto">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h4 class="card-title">History (Past Analyses)</h4>
+        <p class="text-muted">All training runs, inspections, and batch predictions are remembered. Stored in <code>.web_data/history.db</code>.</p>
+        <h5>Training Runs</h5>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead><tr><th>Created</th><th>Type</th><th>Status</th><th>Target</th><th>Positive</th><th>Model</th><th>Data file</th></tr></thead>
+            <tbody>
+              {% for r in runs %}
+                <tr>
+                  <td>{{ r.created_at }}</td>
+                  <td>{{ r.type }}</td>
+                  <td>{{ r.status }}</td>
+                  <td>{{ r.target }}</td>
+                  <td>{{ r.positive_label }}</td>
+                  <td>{{ r.model_path }}</td>
+                  <td>{{ r.data_file }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="7" class="text-muted">No runs yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <h5 class="mt-4">Batch Predictions</h5>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead><tr><th>Created</th><th>Input</th><th>Output</th><th>Model</th><th>Threshold</th><th>Count</th></tr></thead>
+            <tbody>
+              {% for p in predictions %}
+                <tr>
+                  <td>{{ p.created_at }}</td>
+                  <td>{{ p.input_file }}</td>
+                  <td>{{ p.output_file }}</td>
+                  <td>{{ p.model_path }}</td>
+                  <td>{{ p.threshold }}</td>
+                  <td>{{ p.count }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="text-muted">No batch predictions yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <h5 class="mt-4">Inspections</h5>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead><tr><th>Created</th><th>Data file</th><th>Target</th><th>Report (MD)</th></tr></thead>
+            <tbody>
+              {% for i in inspections %}
+                <tr>
+                  <td>{{ i.created_at }}</td>
+                  <td>{{ i.data_file }}</td>
+                  <td>{{ i.target }}</td>
+                  <td>{{ i.report_md }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4" class="text-muted">No inspections yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

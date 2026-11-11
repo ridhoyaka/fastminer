@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+build/
+dist/
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment variables
+.env
+.env.*
+
+# Testing & linting caches
+.pytest_cache/
+.ruff_cache/
+
+# Web app data (SQLite history, uploaded files)
+.web_data/
+data/uploads/*
+!data/uploads/.gitkeep
+
+# Trained models (large binary files)
+models/*.joblib
+models/*.json
+
+# Reports (generated outputs)
+reports/*
+!reports/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+.DS_Store

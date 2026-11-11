@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Explore - Fast Miner{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-10 mx-auto">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h4 class="card-title">2. Explore</h4>
+        <form method="post" class="row g-2 align-items-center">
+          <div class="col-auto">
+            <select class="form-select" name="target">
+              <option value="">-- No target (schema only) --</option>
+              {% for col in info.schema %}
+                <option value="{{ col.name }}" {% if target==col.name %}selected{% endif %}>{{ col.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary" type="submit">Run Inspection</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% if info %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h5>Summary</h5>
+        <ul>
+          <li>Rows: {{ info.rows }}</li>
+          <li>Columns: {{ info.columns }}</li>
+          <li>Duplicate rows: {{ info.duplicate_rows }}</li>
+          <li>Missing cells: {{ info.total_missing }}</li>
+          <li>Binary target candidates: {{ info.binary_target_candidates | join(', ') }}</li>
+        </ul>
+        {% if info.target %}
+        <h6>Target: {{ info.target }}</h6>
+        <ul>
+          {% for c in info.class_balance.classes %}
+            <li>{{ c.label }}: {{ c.count }} ({{ c.pct }}%)</li>
+          {% endfor %}
+        </ul>
+        {% if info.class_balance.imbalanced %}
+        <div class="alert alert-warning">Warning: target is imbalanced.</div>
+        {% endif %}
+        {% endif %}
+        <h6 class="mt-3">Columns</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead><tr><th>Column</th><th>Type</th><th>Kind</th><th>Missing %</th><th>Unique</th></tr></thead>
+            <tbody>
+              {% for col in info.schema %}
+                <tr>
+                  <td>{{ col.name }}{% if col.is_target %} <span class="badge bg-primary">target</span>{% endif %}</td>
+                  <td>{{ col.dtype }}</td>
+                  <td>{{ col.kind }}</td>
+                  <td>{{ col.missing_pct }}%</td>
+                  <td>{{ col.unique }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="small text-muted">Reports saved to <code>reports/</code> (markdown + JSON)</div>
+        <a class="btn btn-outline-primary mt-2" href="{{ url_for('train_page') }}">Go to Train →</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

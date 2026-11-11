@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Fast Miner - Home{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-8 mx-auto">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h3 class="card-title">Fast Miner (Web)</h3>
+        <p class="text-muted">Browser-based binary classification that works fully offline. All data stays on your machine.</p>
+        <div class="row mt-4">
+          <div class="col-md-6 mb-3">
+            <div class="border rounded p-3 h-100">
+              <h5>1) Data</h5>
+              <p class="small text-muted">Upload CSV, XLSX, or JSON. Preview rows and pick target/positive class.</p>
+              <a class="btn btn-primary" href="{{ url_for('data_page') }}">Go to Data</a>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="border rounded p-3 h-100">
+              <h5>2) Explore</h5>
+              <p class="small text-muted">Inspect schema, missing values, class balance. Reports saved to <code>reports/</code>.</p>
+              <a class="btn btn-outline-primary" href="{{ url_for('explore') }}">Explore</a>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="border rounded p-3 h-100">
+              <h5>3) Train</h5>
+              <p class="small text-muted">Compare models with CV, optional search/balanced weights. Models saved to <code>models/</code>.</p>
+              <a class="btn btn-outline-primary" href="{{ url_for('train_page') }}">Train</a>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="border rounded p-3 h-100">
+              <h5>4) Evaluate & Predict</h5>
+              <p class="small text-muted">Threshold tuning, metrics, manual prediction, batch scoring.</p>
+              <a class="btn btn-outline-primary" href="{{ url_for('evaluate_page') }}">Evaluate</a> <a class="btn btn-outline-primary" href="{{ url_for('predict_page') }}">Predict</a>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="border rounded p-3 h-100">
+              <h5>History</h5>
+              <p class="small text-muted">Remember past analyses - training runs, inspections, batch predictions.</p>
+              <a class="btn btn-outline-secondary" href="{{ url_for('history_page') }}">View History</a>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="border rounded p-3 h-100">
+              <h5>Models</h5>
+              <p class="small text-muted">Browse and load saved models from <code>models/</code>.</p>
+              <a class="btn btn-outline-secondary" href="{{ url_for('model_page') }}">Model Registry</a>
+            </div>
+          </div>
+        </div>
+        <hr>
+        <p class="small text-muted mb-0">Paths: <code>data/</code> uploads, <code>models/</code> saved models, <code>reports/</code> outputs, <code>.web_data/</code> history DB. All local, works offline.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

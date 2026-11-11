@@ -1,0 +1,13 @@
+age,income,debt_ratio,employment_years,has_default,region
+21,4850.0,0.946,24,False,west
+26,3601.0,0.532,19,True,west
+46,6557.0,0.88,26,False,north
+33,4541.0,0.915,15,False,east
+33,1948.0,0.086,27,False,south
+49,6132.0,0.13,3,True,west
+48,4414.0,0.599,12,True,north
+25,3882.0,0.467,27,False,east
+32,4673.0,0.057,12,False,south
+48,4617.0,0.062,2,False,north
+22,4311.0,0.21,28,False,north
+33,4706.0,0.71,5,True,north

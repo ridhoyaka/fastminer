@@ -241,16 +241,24 @@ h1,h2,h3,h4,h5,h6 { margin: 0; font-weight: 600; }
 
 /* Topbar */
 .fm-topbar {
-  height: 52px;
+  height: 54px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
   position: sticky;
   top: 0;
   z-index: 100;
+  display: flex;
+  align-items: center;
+}
+
+.fm-topbar-inner {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .fm-breadcrumb {
@@ -294,9 +302,12 @@ h1,h2,h3,h4,h5,h6 { margin: 0; font-weight: 600; }
 /* Content */
 .fm-content {
   flex: 1;
-  padding: 24px 20px;
   width: 100%;
-  max-width: 1000px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 28px 32px 48px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ---------- Card ---------- */
@@ -310,7 +321,7 @@ h1,h2,h3,h4,h5,h6 { margin: 0; font-weight: 600; }
 }
 
 .fm-card-header {
-  padding: 13px 18px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -323,66 +334,73 @@ h1,h2,h3,h4,h5,h6 { margin: 0; font-weight: 600; }
 .fm-card-header h3,
 .fm-card-header h4,
 .fm-card-header h5 {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.fm-card-body { padding: 18px; }
+.fm-card-body { padding: 20px; }
 .fm-card-body > p { color: var(--text-secondary); margin-top: 0; }
 .fm-card-body > p:last-child { margin-bottom: 0; }
 
 /* ---------- Hero (index) ---------- */
 .fm-hero {
-  background: var(--bg-card);
+  background: linear-gradient(180deg, #182030 0%, #151b28 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 28px 24px 22px;
+  padding: 30px 32px;
   margin-bottom: 20px;
 }
 
 .fm-hero-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: -.3px;
+  letter-spacing: -.4px;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .fm-hero-sub {
   color: var(--text-secondary);
-  font-size: 13.5px;
+  font-size: 14px;
   margin: 0;
+  max-width: 720px;
 }
 
 /* ---------- Feature grid ---------- */
 .fm-feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .fm-feature-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px;
-  transition: border-color var(--transition);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color var(--transition), transform var(--transition);
 }
 
-.fm-feature-card:hover { border-color: var(--accent); }
+.fm-feature-card:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+}
 
 .fm-feature-step {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px; height: 22px;
+  width: 24px; height: 24px;
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
   font-size: 11px;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .fm-feature-step.muted {
@@ -391,17 +409,18 @@ h1,h2,h3,h4,h5,h6 { margin: 0; font-weight: 600; }
 }
 
 .fm-feature-title {
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 5px;
+  margin: 0 0 6px;
 }
 
 .fm-feature-desc {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   line-height: 1.55;
+  flex: 1;
 }
 
 /* ---------- Buttons ---------- */
@@ -614,6 +633,15 @@ input[type="file"]::file-selector-button:hover {
 
 .table tbody tr:last-child td { border-bottom: none; }
 .table tbody tr:hover td { background: var(--bg-hover); color: var(--text-primary); }
+.fm-path-bar {
+  padding: 12px 18px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .fm-feature-scroll {
   max-height: 380px;
   overflow-y: auto;
@@ -920,6 +948,10 @@ pre code { background: none; color: inherit; padding: 0; }
   }
 
   .fm-topbar {
+    padding: 0;
+  }
+
+  .fm-topbar-inner {
     padding: 0 14px;
   }
 

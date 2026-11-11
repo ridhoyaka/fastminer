@@ -117,24 +117,26 @@
   <div class="fm-main">
 
     <header class="fm-topbar">
-      <!-- Mobile toggle -->
-      <button class="fm-nav-toggle" onclick="openSidebar()" aria-label="Open menu">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="3" y1="6"  x2="21" y2="6"/>
-          <line x1="3" y1="12" x2="21" y2="12"/>
-          <line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
-      </button>
+      <div class="fm-topbar-inner">
+        <!-- Mobile toggle -->
+        <button class="fm-nav-toggle" onclick="openSidebar()" aria-label="Open menu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="3" y1="6"  x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
 
-      <div class="fm-breadcrumb">
-        <span>Fast Miner</span>
-        <span style="color:var(--border);">/</span>
-        <strong>{% block page_title %}Home{% endblock %}</strong>
-      </div>
+        <div class="fm-breadcrumb">
+          <span>Fast Miner</span>
+          <span style="color:var(--border);">/</span>
+          <strong>{% block page_title %}Home{% endblock %}</strong>
+        </div>
 
-      <div class="fm-topbar-meta">
-        <span class="fm-pill"><span class="fm-dot"></span> Local</span>
+        <div class="fm-topbar-meta">
+          <span class="fm-pill"><span class="fm-dot"></span> Local</span>
+        </div>
       </div>
     </header>
 

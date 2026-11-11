@@ -1,54 +1,72 @@
 {% extends "base.html" %}
-{% block title %}Models - Fast Miner{% endblock %}
+{% block title %}Models — Fast Miner{% endblock %}
+{% block page_title %}Model Registry{% endblock %}
+
 {% block content %}
-<div class="row">
-  <div class="col-lg-10 mx-auto">
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <h4 class="card-title">6. Models</h4>
-        <p class="text-muted">Save/load trained models. Models are joblib files with metadata.</p>
-        {% if bundle %}
-        <div class="alert alert-info">
-          <strong>Current model loaded</strong><br>
-          Name: {{ bundle.metadata.model_name }}<br>
-          Target: {{ bundle.metadata.target }} | Positive: {{ bundle.metadata.positive_label }}<br>
-          Features: {{ bundle.metadata.feature_columns|length }}
-        </div>
-        {% else %}
-        <div class="alert alert-warning">No model loaded in session. Train a model or load from below.</div>
-        {% endif %}
-        <h5 class="mt-3">Saved models in <code>models/</code></h5>
-        <div class="table-responsive">
-          <table class="table table-sm table-striped">
-            <thead><tr><th>Name</th><th>Modified</th><th>Action</th></tr></thead>
-            <tbody>
-              {% for m in models %}
-                <tr>
-                  <td>{{ m.name }}</td>
-                  <td>{{ m.mtime }}</td>
-                  <td>
-                    <form action="{{ url_for('model_load') }}" method="post" class="d-inline">
-                      <input type="hidden" name="path" value="{{ m.path }}">
-                      <button class="btn btn-sm btn-primary" type="submit">Load</button>
-                    </form>
-                    <form action="{{ url_for('storage_delete') }}" method="post" class="d-inline" onsubmit="return confirm('Delete this model and related history/reports?');">
-                      <input type="hidden" name="kind" value="model">
-                      <input type="hidden" name="name" value="{{ m.name }}">
-                      <input type="hidden" name="return_to" value="model">
-                      <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                    </form>
-                  </td>
-                </tr>
-              {% else %}
-                <tr><td colspan="3" class="text-muted">No models found</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <a class="btn btn-outline-primary" href="{{ url_for('predict_page') }}">Go to Predict →</a>
-        <a class="btn btn-outline-danger" href="{{ url_for('storage_page') }}">Manage Storage</a>
-      </div>
+
+{% if bundle %}
+<div class="alert alert-success">
+  <div>
+    ✓ <strong>Model loaded in session</strong><br>
+    <strong>Name:</strong> {{ bundle.metadata.model_name }} &nbsp;·&nbsp;
+    <strong>Target:</strong> {{ bundle.metadata.target }} &nbsp;·&nbsp;
+    <strong>Positive:</strong> {{ bundle.metadata.positive_label }} &nbsp;·&nbsp;
+    <strong>Features:</strong> {{ bundle.metadata.feature_columns|length }}
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+  ⚠ No model loaded in session. Train a model or load one from below.
+</div>
+{% endif %}
+
+<div class="fm-card">
+  <div class="fm-card-header">
+    <h4>🗂 Saved Models</h4>
+    <span class="small text-muted"><code>models/</code></span>
+  </div>
+  <div class="fm-card-body" style="padding:0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Modified</th>
+            <th style="width:160px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in models %}
+            <tr>
+              <td style="font-family:var(--mono);font-size:12.5px;">{{ m.name }}</td>
+              <td class="text-muted">{{ m.mtime }}</td>
+              <td>
+                <div class="d-flex gap-2">
+                  <form action="{{ url_for('model_load') }}" method="post" class="d-inline">
+                    <input type="hidden" name="path" value="{{ m.path }}">
+                    <button class="btn btn-primary btn-sm" type="submit">Load</button>
+                  </form>
+                  <form action="{{ url_for('storage_delete') }}" method="post" class="d-inline"
+                        onsubmit="return confirm('Delete this model and related history/reports?');">
+                    <input type="hidden" name="kind" value="model">
+                    <input type="hidden" name="name" value="{{ m.name }}">
+                    <input type="hidden" name="return_to" value="model">
+                    <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="3" class="text-muted" style="text-align:center;padding:24px;">No saved models found</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
+</div>
+
+<div class="d-flex gap-3">
+  <a class="btn btn-primary btn-sm" href="{{ url_for('predict_page') }}">Go to Predict →</a>
+  <a class="btn btn-outline-danger btn-sm" href="{{ url_for('storage_page') }}">Manage Storage</a>
 </div>
 {% endblock %}

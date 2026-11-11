@@ -1,56 +1,67 @@
 {% extends "base.html" %}
-{% block title %}Predict - Fast Miner{% endblock %}
+{% block title %}Predict — Fast Miner{% endblock %}
+{% block page_title %}Predict{% endblock %}
+
 {% block content %}
-<div class="row">
-  <div class="col-lg-10 mx-auto">
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <h4 class="card-title">5. Predict</h4>
-        <p class="text-muted">Threshold: {{ '%.2f'|format(threshold) }} | Model: {{ bundle.metadata.model_name if bundle.metadata else '' }}</p>
-      </div>
+<!-- Info bar -->
+<div class="fm-card">
+  <div class="fm-card-header">
+    <h4>🎯 Step 5 — Predict</h4>
+    <div class="d-flex gap-3 align-items-center">
+      {% if bundle.metadata %}
+        <span class="badge badge-primary">{{ bundle.metadata.model_name }}</span>
+      {% endif %}
+      <span class="badge badge-muted">threshold = {{ '%.2f'|format(threshold) }}</span>
     </div>
-    <div class="row">
-      <div class="col-md-6 mb-3">
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <h5>Manual prediction (single case)</h5>
-            <form method="post">
-              <input type="hidden" name="mode" value="manual">
-              {% for f in features %}
-                <div class="mb-2">
-                  <label class="form-label">{{ f }}</label>
-                  <input class="form-control" name="{{ f }}" placeholder="Enter value">
-                </div>
-              {% endfor %}
-              <button class="btn btn-primary" type="submit">Predict</button>
-            </form>
-            {% if result %}
-            <div class="alert alert-success mt-3">
-              <strong>Prediction:</strong> {{ result.prediction }}<br>
-              <strong>Probability of {{ result.positive_label }}:</strong> {{ '%.3f'|format(result.probability) }}<br>
-              <strong>Threshold:</strong> {{ '%.2f'|format(result.threshold) }}
-            </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6 mb-3">
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <h5>Batch prediction</h5>
-            <p class="text-muted">Upload unlabeled CSV/XLSX/JSON. Results downloaded as CSV.</p>
-            <form action="{{ url_for('predict_batch') }}" method="post" enctype="multipart/form-data">
-              <div class="mb-2">
-                <input class="form-control" type="file" name="file" accept=".csv,.xlsx,.xls,.json" required>
-              </div>
-              <button class="btn btn-primary" type="submit">Predict & Download</button>
-            </form>
-            <div class="small text-muted mt-2">Saved to <code>reports/</code> and logged in history</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <a class="btn btn-outline-secondary" href="{{ url_for('model_page') }}">Manage Models →</a>
   </div>
 </div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+
+  <!-- Manual -->
+  <div class="fm-card">
+    <div class="fm-card-header"><h5>🖊 Manual prediction</h5></div>
+    <div class="fm-card-body">
+      <form method="post">
+        <input type="hidden" name="mode" value="manual">
+        {% for f in features %}
+          <div class="mb-2">
+            <label class="form-label">{{ f }}</label>
+            <input class="form-control" name="{{ f }}" placeholder="Enter value">
+          </div>
+        {% endfor %}
+        <button class="btn btn-primary" type="submit">▶ Predict</button>
+      </form>
+
+      {% if result %}
+      <div class="alert alert-success mt-3">
+        <div>
+          <strong>Prediction:</strong> {{ result.prediction }}<br>
+          <strong>Probability ({{ result.positive_label }}):</strong>
+          <span style="font-family:var(--mono);font-size:14px;">{{ '%.3f'|format(result.probability) }}</span><br>
+          <strong>Threshold:</strong> {{ '%.2f'|format(result.threshold) }}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Batch -->
+  <div class="fm-card">
+    <div class="fm-card-header"><h5>📦 Batch prediction</h5></div>
+    <div class="fm-card-body">
+      <p class="text-muted">Upload an unlabeled CSV / XLSX / JSON. Results downloaded as CSV.</p>
+      <form action="{{ url_for('predict_batch') }}" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+          <input class="form-control" type="file" name="file" accept=".csv,.xlsx,.xls,.json" required>
+        </div>
+        <button class="btn btn-primary" type="submit">⬆ Predict &amp; Download</button>
+      </form>
+      <div class="small text-muted mt-2">Saved to <code>reports/</code> and logged in history.</div>
+    </div>
+  </div>
+
+</div>
+
+<a class="btn btn-outline btn-sm" href="{{ url_for('model_page') }}">🗂 Manage Models →</a>
 {% endblock %}

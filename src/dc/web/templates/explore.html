@@ -1,70 +1,128 @@
 {% extends "base.html" %}
-{% block title %}Explore - Fast Miner{% endblock %}
+{% block title %}Explore — Fast Miner{% endblock %}
+{% block page_title %}Explore{% endblock %}
+
 {% block content %}
-<div class="row">
-  <div class="col-lg-10 mx-auto">
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <h4 class="card-title">2. Explore</h4>
-        <form method="post" class="row g-2 align-items-center">
-          <div class="col-auto">
-            <select class="form-select" name="target">
-              <option value="">-- No target (schema only) --</option>
-              {% for col in info.schema %}
-                <option value="{{ col.name }}" {% if target==col.name %}selected{% endif %}>{{ col.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-auto">
-            <button class="btn btn-primary" type="submit">Run Inspection</button>
-          </div>
-        </form>
+<div class="fm-card">
+  <div class="fm-card-header">
+    <h4>🔍 Step 2 — Explore Dataset</h4>
+  </div>
+  <div class="fm-card-body">
+    <form method="post" class="d-flex align-items-center gap-3" style="flex-wrap:wrap;">
+      <div>
+        <label class="form-label">Target column</label>
+        <select class="form-select" name="target" style="min-width:200px;">
+          <option value="">— No target (schema only) —</option>
+          {% for col in info.schema %}
+            <option value="{{ col.name }}" {% if target==col.name %}selected{% endif %}>{{ col.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="padding-top:18px;">
+        <button class="btn btn-primary" type="submit">▶ Run Inspection</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if info %}
+<!-- Summary stats -->
+<div class="fm-card">
+  <div class="fm-card-header"><h4>📋 Summary</h4></div>
+  <div class="fm-card-body">
+    <div class="fm-stat-grid mb-3">
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Rows</div>
+        <div class="fm-stat-value">{{ info.rows }}</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Columns</div>
+        <div class="fm-stat-value">{{ info.columns }}</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Duplicate rows</div>
+        <div class="fm-stat-value">{{ info.duplicate_rows }}</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Missing cells</div>
+        <div class="fm-stat-value">{{ info.total_missing }}</div>
       </div>
     </div>
-    {% if info %}
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <h5>Summary</h5>
-        <ul>
-          <li>Rows: {{ info.rows }}</li>
-          <li>Columns: {{ info.columns }}</li>
-          <li>Duplicate rows: {{ info.duplicate_rows }}</li>
-          <li>Missing cells: {{ info.total_missing }}</li>
-          <li>Binary target candidates: {{ info.binary_target_candidates | join(', ') }}</li>
-        </ul>
-        {% if info.target %}
-        <h6>Target: {{ info.target }}</h6>
-        <ul>
-          {% for c in info.class_balance.classes %}
-            <li>{{ c.label }}: {{ c.count }} ({{ c.pct }}%)</li>
-          {% endfor %}
-        </ul>
-        {% if info.class_balance.imbalanced %}
-        <div class="alert alert-warning">Warning: target is imbalanced.</div>
-        {% endif %}
-        {% endif %}
-        <h6 class="mt-3">Columns</h6>
-        <div class="table-responsive">
-          <table class="table table-sm table-striped">
-            <thead><tr><th>Column</th><th>Type</th><th>Kind</th><th>Missing %</th><th>Unique</th></tr></thead>
-            <tbody>
-              {% for col in info.schema %}
-                <tr>
-                  <td>{{ col.name }}{% if col.is_target %} <span class="badge bg-primary">target</span>{% endif %}</td>
-                  <td>{{ col.dtype }}</td>
-                  <td>{{ col.kind }}</td>
-                  <td>{{ col.missing_pct }}%</td>
-                  <td>{{ col.unique }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <div class="small text-muted">Reports saved to <code>reports/</code> (markdown + JSON)</div>
-        <a class="btn btn-outline-primary mt-2" href="{{ url_for('train_page') }}">Go to Train →</a>
+
+    <div class="small text-muted">
+      Binary candidates: 
+      {% for c in info.binary_target_candidates %}
+        <span class="badge badge-primary">{{ c }}</span>
+      {% else %}
+        <em>none</em>
+      {% endfor %}
+    </div>
+
+    {% if info.target %}
+    <div style="margin-top:16px;">
+      <div class="fm-section-title">Target: {{ info.target }}</div>
+      <div class="d-flex flex-wrap gap-2">
+        {% for c in info.class_balance.classes %}
+          <div class="fm-stat-tile" style="min-width:120px;">
+            <div class="fm-stat-label">{{ c.label }}</div>
+            <div class="fm-stat-value" style="font-size:16px;">{{ c.count }}</div>
+            <div class="fm-stat-sub">{{ c.pct }}%</div>
+          </div>
+        {% endfor %}
       </div>
+      {% if info.class_balance.imbalanced %}
+        <div class="alert alert-warning mt-3">⚠ Target is imbalanced — consider enabling balanced class weights during training.</div>
+      {% endif %}
     </div>
     {% endif %}
   </div>
 </div>
+
+<!-- Schema table -->
+<div class="fm-card">
+  <div class="fm-card-header"><h4>🗃 Column Schema</h4></div>
+  <div class="fm-card-body" style="padding:0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Column</th>
+            <th>Type</th>
+            <th>Kind</th>
+            <th>Missing %</th>
+            <th>Unique</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for col in info.schema %}
+            <tr>
+              <td>
+                {{ col.name }}
+                {% if col.is_target %}<span class="badge badge-primary" style="margin-left:6px;">target</span>{% endif %}
+              </td>
+              <td><code>{{ col.dtype }}</code></td>
+              <td>{{ col.kind }}</td>
+              <td>
+                {% if col.missing_pct > 20 %}
+                  <span class="text-danger">{{ col.missing_pct }}%</span>
+                {% elif col.missing_pct > 0 %}
+                  <span class="text-warning">{{ col.missing_pct }}%</span>
+                {% else %}
+                  <span class="text-success">0%</span>
+                {% endif %}
+              </td>
+              <td>{{ col.unique }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex align-items-center gap-3">
+  <span class="small text-muted">Reports saved to <code>reports/</code></span>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('train_page') }}">Go to Train →</a>
+</div>
+{% endif %}
 {% endblock %}

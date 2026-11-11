@@ -1,43 +1,69 @@
 {% extends "base.html" %}
-{% block title %}Evaluate - Fast Miner{% endblock %}
+{% block title %}Evaluate — Fast Miner{% endblock %}
+{% block page_title %}Evaluate{% endblock %}
+
 {% block content %}
-<div class="row">
-  <div class="col-lg-10 mx-auto">
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <h4 class="card-title">4. Evaluate</h4>
-        <p class="text-muted">Model: {{ bundle.metadata.model_name if bundle.metadata else 'unknown' }} | Target: {{ bundle.metadata.target if bundle.metadata else '' }} | Positive: {{ bundle.metadata.positive_label if bundle.metadata else '' }}</p>
-        <form method="post" class="row g-2 align-items-center">
-          <div class="col-auto">
-            <label class="form-label">Threshold</label>
-          </div>
-          <div class="col-auto">
-            <input type="range" class="form-range" name="threshold" min="0" max="1" step="0.01" value="{{ '%.2f'|format(threshold) }}" oninput="this.nextElementSibling.value=this.value">
-            <output>{{ '%.2f'|format(threshold) }}</output>
-          </div>
-          <div class="col-auto">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="evaluate_on_current" id="evalcur" checked>
-              <label class="form-check-label" for="evalcur">Evaluate on current loaded data (if labeled)</label>
-            </div>
-          </div>
-          <div class="col-auto">
-            <button class="btn btn-primary" type="submit">Update</button>
-          </div>
-        </form>
+<div class="fm-card">
+  <div class="fm-card-header">
+    <h4>📊 Step 4 — Evaluate</h4>
+    <span class="badge badge-primary">
+      {{ bundle.metadata.model_name if bundle.metadata else 'No model loaded' }}
+    </span>
+  </div>
+  <div class="fm-card-body">
+
+    {% if bundle.metadata %}
+    <div class="fm-stat-grid mb-4">
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Model</div>
+        <div class="fm-stat-value" style="font-size:14px;">{{ bundle.metadata.model_name }}</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Target</div>
+        <div class="fm-stat-value" style="font-size:14px;">{{ bundle.metadata.target }}</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Positive class</div>
+        <div class="fm-stat-value" style="font-size:14px;">{{ bundle.metadata.positive_label }}</div>
       </div>
     </div>
-    {% if metrics %}
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <h5>Metrics (threshold {{ '%.2f'|format(metrics.threshold) }})</h5>
-        <pre>{{ metrics | tojson(indent=2) }}</pre>
-      </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info">Adjust threshold or evaluate on labeled current data.</div>
     {% endif %}
-    <a class="btn btn-outline-primary" href="{{ url_for('predict_page') }}">Go to Predict →</a>
+
+    <form method="post">
+      <div class="fm-section-title">Threshold tuning</div>
+      <div class="fm-range-row mb-3">
+        <label class="form-label mb-0" style="white-space:nowrap;">Decision threshold</label>
+        <input type="range" class="form-range" name="threshold"
+               min="0" max="1" step="0.01"
+               value="{{ '%.2f'|format(threshold) }}"
+               oninput="this.nextElementSibling.value=this.value"
+               style="flex:1;">
+        <output>{{ '%.2f'|format(threshold) }}</output>
+      </div>
+
+      <label class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" name="evaluate_on_current" id="evalcur" checked>
+        <span class="form-check-label">Evaluate on current loaded data (if labeled)</span>
+      </label>
+
+      <button class="btn btn-primary" type="submit">▶ Update</button>
+    </form>
   </div>
 </div>
+
+{% if metrics %}
+<div class="fm-card">
+  <div class="fm-card-header">
+    <h4>📈 Metrics</h4>
+    <span class="badge badge-muted">threshold = {{ '%.2f'|format(metrics.threshold) }}</span>
+  </div>
+  <div class="fm-card-body">
+    <pre>{{ metrics | tojson(indent=2) }}</pre>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-info">ℹ Adjust the threshold and click Update to compute metrics.</div>
+{% endif %}
+
+<a class="btn btn-primary btn-sm" href="{{ url_for('predict_page') }}">Go to Predict →</a>
 {% endblock %}

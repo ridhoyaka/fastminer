@@ -1,194 +1,209 @@
 {% extends "base.html" %}
-{% block title %}Storage - Fast Miner{% endblock %}
+{% block title %}Storage — Fast Miner{% endblock %}
+{% block page_title %}Storage & Cleanup{% endblock %}
+
 {% block content %}
-<div class="row">
-  <div class="col-lg-11 mx-auto">
-    <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <h4 class="card-title">Storage &amp; Cleanup</h4>
-        <p class="text-muted">Remove old uploads, models, reports, and history so the app does not fill up. Deletions cannot be undone.</p>
-        <div class="row g-2">
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Uploaded data</div>
-              <strong>{{ uploads_size }}</strong>
-              <div class="small">{{ uploads|length }} file(s)</div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Saved models</div>
-              <strong>{{ models_size }}</strong>
-              <div class="small">{{ models|length }} model(s)</div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">Reports</div>
-              <strong>{{ reports_size }}</strong>
-              <div class="small">{{ reports|length }} item(s)</div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="border rounded p-2 h-100">
-              <div class="small text-muted">History database</div>
-              <strong>{{ db_size }}</strong>
-              <div class="small">{{ counts.runs }} run(s)</div>
-            </div>
-          </div>
-        </div>
-        <div class="d-flex justify-content-between align-items-center mt-3">
-          <span class="small text-muted">Total local storage used: <strong>{{ total_size }}</strong></span>
-          <span class="small text-muted"><code>data/uploads/</code>, <code>models/</code>, <code>reports/</code>, <code>.web_data/</code></span>
-        </div>
-        <div class="alert alert-warning mt-3 mb-0">
-          Deleting an uploaded file or model also removes its related history entries and generated reports.
-        </div>
-      </div>
-    </div>
 
-    <div class="card shadow-sm mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Uploaded data <span class="badge bg-secondary">{{ uploads_size }}</span></h5>
-        <form action="{{ url_for('storage_clear') }}" method="post" onsubmit="return confirm('Delete all uploaded data files and related history/reports?');">
-          <input type="hidden" name="scope" value="uploads">
-          <button class="btn btn-sm btn-outline-danger" type="submit" {% if not uploads %}disabled{% endif %}>Delete all uploads</button>
-        </form>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-sm table-striped align-middle mb-0">
-            <thead><tr><th>File</th><th>Size</th><th>Uploaded</th><th>Action</th></tr></thead>
-            <tbody>
-              {% for item in uploads %}
-                <tr>
-                  <td>{{ item.name }}</td>
-                  <td>{{ item.size_text }}</td>
-                  <td>{{ item.mtime }}</td>
-                  <td>
-                    <form action="{{ url_for('storage_delete') }}" method="post" class="d-inline" onsubmit="return confirm('Delete this uploaded file and related history/reports?');">
-                      <input type="hidden" name="kind" value="upload">
-                      <input type="hidden" name="name" value="{{ item.name }}">
-                      <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                    </form>
-                  </td>
-                </tr>
-              {% else %}
-                <tr><td colspan="4" class="text-muted">No uploaded files</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+<div class="alert alert-warning">
+  ⚠ Deleting an uploaded file or model also removes its related history entries and generated reports. <strong>Deletions cannot be undone.</strong>
+</div>
 
-    <div class="card shadow-sm mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Saved models <span class="badge bg-secondary">{{ models_size }}</span></h5>
-        <form action="{{ url_for('storage_clear') }}" method="post" onsubmit="return confirm('Delete all saved models and related history/reports?');">
-          <input type="hidden" name="scope" value="models">
-          <button class="btn btn-sm btn-outline-danger" type="submit" {% if not models %}disabled{% endif %}>Delete all models</button>
-        </form>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-sm table-striped align-middle mb-0">
-            <thead><tr><th>Model</th><th>Size</th><th>Modified</th><th>Action</th></tr></thead>
-            <tbody>
-              {% for item in models %}
-                <tr>
-                  <td>
-                    {{ item.name }}
-                    {% if item.files|length > 1 %}<div class="small text-muted">{{ item.files|join(', ') }}</div>{% endif %}
-                  </td>
-                  <td>{{ item.size_text }}</td>
-                  <td>{{ item.mtime }}</td>
-                  <td>
-                    <form action="{{ url_for('storage_delete') }}" method="post" class="d-inline" onsubmit="return confirm('Delete this model and related history/reports?');">
-                      <input type="hidden" name="kind" value="model">
-                      <input type="hidden" name="name" value="{{ item.name }}">
-                      <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                    </form>
-                  </td>
-                </tr>
-              {% else %}
-                <tr><td colspan="4" class="text-muted">No saved models</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="card shadow-sm mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Reports <span class="badge bg-secondary">{{ reports_size }}</span></h5>
-        <form action="{{ url_for('storage_clear') }}" method="post" onsubmit="return confirm('Delete all reports and related history?');">
-          <input type="hidden" name="scope" value="reports">
-          <button class="btn btn-sm btn-outline-danger" type="submit" {% if not reports %}disabled{% endif %}>Delete all reports</button>
-        </form>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-sm table-striped align-middle mb-0">
-            <thead><tr><th>Report</th><th>Size</th><th>Modified</th><th>Action</th></tr></thead>
-            <tbody>
-              {% for item in reports %}
-                <tr>
-                  <td>
-                    {{ item.name }}
-                    {% if item.files|length > 1 %}<div class="small text-muted">{{ item.files|join(', ') }}</div>{% endif %}
-                  </td>
-                  <td>{{ item.size_text }}</td>
-                  <td>{{ item.mtime }}</td>
-                  <td>
-                    <form action="{{ url_for('storage_delete') }}" method="post" class="d-inline" onsubmit="return confirm('Delete this report and related history?');">
-                      <input type="hidden" name="kind" value="report">
-                      <input type="hidden" name="name" value="{{ item.name }}">
-                      <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                    </form>
-                  </td>
-                </tr>
-              {% else %}
-                <tr><td colspan="4" class="text-muted">No reports</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="card shadow-sm mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">History</h5>
-        <form action="{{ url_for('storage_clear') }}" method="post" onsubmit="return confirm('Clear all history? Report and model files will be kept.');">
-          <input type="hidden" name="scope" value="history">
-          <button class="btn btn-sm btn-outline-danger" type="submit" {% if not (counts.runs or counts.predictions or counts.inspections) %}disabled{% endif %}>Clear history</button>
-        </form>
-      </div>
-      <div class="card-body">
-        <div class="row g-2">
-          <div class="col-md-4"><div class="border rounded p-2"><div class="small text-muted">Training runs</div><strong>{{ counts.runs }}</strong></div></div>
-          <div class="col-md-4"><div class="border rounded p-2"><div class="small text-muted">Batch predictions</div><strong>{{ counts.predictions }}</strong></div></div>
-          <div class="col-md-4"><div class="border rounded p-2"><div class="small text-muted">Inspections</div><strong>{{ counts.inspections }}</strong></div></div>
-        </div>
-        <div class="small text-muted mt-2">Clearing history removes database rows and compacts the database file. Uploads, models, and reports stay on disk.</div>
-      </div>
-    </div>
-
-    <div class="card border-danger shadow-sm mb-3">
-      <div class="card-header bg-danger text-white">Danger zone</div>
-      <div class="card-body">
-        <p class="mb-2">Delete every uploaded file, model, report, and history record. This cannot be undone.</p>
-        <form action="{{ url_for('storage_clear') }}" method="post" onsubmit="return confirm('Delete ALL uploads, models, reports, and history? This cannot be undone.');">
-          <input type="hidden" name="scope" value="all">
-          <button class="btn btn-danger" type="submit">Delete all artifacts</button>
-        </form>
-      </div>
-    </div>
-
-    <a class="btn btn-outline-primary" href="{{ url_for('data_page') }}">Back to Data</a>
-    <a class="btn btn-outline-secondary" href="{{ url_for('model_page') }}">Models</a>
+<!-- Overview tiles -->
+<div class="fm-stat-grid mb-4">
+  <div class="fm-stat-tile">
+    <div class="fm-stat-label">Uploaded data</div>
+    <div class="fm-stat-value">{{ uploads_size }}</div>
+    <div class="fm-stat-sub">{{ uploads|length }} file(s)</div>
   </div>
+  <div class="fm-stat-tile">
+    <div class="fm-stat-label">Saved models</div>
+    <div class="fm-stat-value">{{ models_size }}</div>
+    <div class="fm-stat-sub">{{ models|length }} model(s)</div>
+  </div>
+  <div class="fm-stat-tile">
+    <div class="fm-stat-label">Reports</div>
+    <div class="fm-stat-value">{{ reports_size }}</div>
+    <div class="fm-stat-sub">{{ reports|length }} item(s)</div>
+  </div>
+  <div class="fm-stat-tile">
+    <div class="fm-stat-label">History DB</div>
+    <div class="fm-stat-value">{{ db_size }}</div>
+    <div class="fm-stat-sub">{{ counts.runs }} run(s)</div>
+  </div>
+</div>
+<div class="small text-muted mb-4">Total local storage: <strong>{{ total_size }}</strong>
+  &nbsp;·&nbsp; <code>data/uploads/</code> <code>models/</code> <code>reports/</code> <code>.web_data/</code>
+</div>
+
+<!-- Uploads -->
+<div class="fm-card">
+  <div class="fm-card-header">
+    <h5>📁 Uploaded data <span class="badge badge-muted">{{ uploads_size }}</span></h5>
+    <form action="{{ url_for('storage_clear') }}" method="post"
+          onsubmit="return confirm('Delete all uploaded data files and related history/reports?');">
+      <input type="hidden" name="scope" value="uploads">
+      <button class="btn btn-outline-danger btn-sm" type="submit" {% if not uploads %}disabled{% endif %}>Delete all uploads</button>
+    </form>
+  </div>
+  <div class="fm-card-body" style="padding:0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>File</th><th>Size</th><th>Uploaded</th><th style="width:100px;">Action</th></tr></thead>
+        <tbody>
+          {% for item in uploads %}
+            <tr>
+              <td style="font-family:var(--mono);font-size:12px;">{{ item.name }}</td>
+              <td class="text-muted">{{ item.size_text }}</td>
+              <td class="text-muted" style="font-size:12px;">{{ item.mtime }}</td>
+              <td>
+                <form action="{{ url_for('storage_delete') }}" method="post" class="d-inline"
+                      onsubmit="return confirm('Delete this file and related history/reports?');">
+                  <input type="hidden" name="kind" value="upload">
+                  <input type="hidden" name="name" value="{{ item.name }}">
+                  <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-muted" style="text-align:center;padding:20px;">No uploaded files</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Models -->
+<div class="fm-card">
+  <div class="fm-card-header">
+    <h5>🗂 Saved models <span class="badge badge-muted">{{ models_size }}</span></h5>
+    <form action="{{ url_for('storage_clear') }}" method="post"
+          onsubmit="return confirm('Delete all saved models and related history/reports?');">
+      <input type="hidden" name="scope" value="models">
+      <button class="btn btn-outline-danger btn-sm" type="submit" {% if not models %}disabled{% endif %}>Delete all models</button>
+    </form>
+  </div>
+  <div class="fm-card-body" style="padding:0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Model</th><th>Size</th><th>Modified</th><th style="width:100px;">Action</th></tr></thead>
+        <tbody>
+          {% for item in models %}
+            <tr>
+              <td>
+                <span style="font-family:var(--mono);font-size:12px;">{{ item.name }}</span>
+                {% if item.files|length > 1 %}<div class="small text-muted">{{ item.files|join(', ') }}</div>{% endif %}
+              </td>
+              <td class="text-muted">{{ item.size_text }}</td>
+              <td class="text-muted" style="font-size:12px;">{{ item.mtime }}</td>
+              <td>
+                <form action="{{ url_for('storage_delete') }}" method="post" class="d-inline"
+                      onsubmit="return confirm('Delete this model and related history/reports?');">
+                  <input type="hidden" name="kind" value="model">
+                  <input type="hidden" name="name" value="{{ item.name }}">
+                  <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-muted" style="text-align:center;padding:20px;">No saved models</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Reports -->
+<div class="fm-card">
+  <div class="fm-card-header">
+    <h5>📄 Reports <span class="badge badge-muted">{{ reports_size }}</span></h5>
+    <form action="{{ url_for('storage_clear') }}" method="post"
+          onsubmit="return confirm('Delete all reports and related history?');">
+      <input type="hidden" name="scope" value="reports">
+      <button class="btn btn-outline-danger btn-sm" type="submit" {% if not reports %}disabled{% endif %}>Delete all reports</button>
+    </form>
+  </div>
+  <div class="fm-card-body" style="padding:0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Report</th><th>Size</th><th>Modified</th><th style="width:100px;">Action</th></tr></thead>
+        <tbody>
+          {% for item in reports %}
+            <tr>
+              <td>
+                <span style="font-family:var(--mono);font-size:12px;">{{ item.name }}</span>
+                {% if item.files|length > 1 %}<div class="small text-muted">{{ item.files|join(', ') }}</div>{% endif %}
+              </td>
+              <td class="text-muted">{{ item.size_text }}</td>
+              <td class="text-muted" style="font-size:12px;">{{ item.mtime }}</td>
+              <td>
+                <form action="{{ url_for('storage_delete') }}" method="post" class="d-inline"
+                      onsubmit="return confirm('Delete this report and related history?');">
+                  <input type="hidden" name="kind" value="report">
+                  <input type="hidden" name="name" value="{{ item.name }}">
+                  <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-muted" style="text-align:center;padding:20px;">No reports</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- History counts -->
+<div class="fm-card">
+  <div class="fm-card-header">
+    <h5>🕓 History database</h5>
+    <form action="{{ url_for('storage_clear') }}" method="post"
+          onsubmit="return confirm('Clear all history? Report and model files will be kept.');">
+      <input type="hidden" name="scope" value="history">
+      <button class="btn btn-outline-danger btn-sm" type="submit"
+              {% if not (counts.runs or counts.predictions or counts.inspections) %}disabled{% endif %}>
+        Clear history
+      </button>
+    </form>
+  </div>
+  <div class="fm-card-body">
+    <div class="fm-stat-grid">
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Training runs</div>
+        <div class="fm-stat-value">{{ counts.runs }}</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Batch predictions</div>
+        <div class="fm-stat-value">{{ counts.predictions }}</div>
+      </div>
+      <div class="fm-stat-tile">
+        <div class="fm-stat-label">Inspections</div>
+        <div class="fm-stat-value">{{ counts.inspections }}</div>
+      </div>
+    </div>
+    <div class="small text-muted mt-3">Clearing history removes database rows and compacts the database file. Uploads, models, and reports stay on disk.</div>
+  </div>
+</div>
+
+<!-- Danger zone -->
+<div class="fm-card" style="border-color: rgba(248,113,113,.4);">
+  <div class="fm-card-header" style="background:rgba(248,113,113,.08); border-bottom-color:rgba(248,113,113,.3);">
+    <h5 style="color:var(--danger);">⚠ Danger Zone</h5>
+  </div>
+  <div class="fm-card-body">
+    <p class="text-muted mb-3">Delete every uploaded file, model, report, and history record. <strong style="color:var(--danger)">This cannot be undone.</strong></p>
+    <form action="{{ url_for('storage_clear') }}" method="post"
+          onsubmit="return confirm('Delete ALL uploads, models, reports, and history? This cannot be undone.');">
+      <input type="hidden" name="scope" value="all">
+      <button class="btn btn-danger" type="submit">🗑 Delete all artifacts</button>
+    </form>
+  </div>
+</div>
+
+<div class="d-flex gap-3">
+  <a class="btn btn-outline btn-sm" href="{{ url_for('data_page') }}">← Back to Data</a>
+  <a class="btn btn-outline btn-sm" href="{{ url_for('model_page') }}">🗂 Models</a>
 </div>
 {% endblock %}

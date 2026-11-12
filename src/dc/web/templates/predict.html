@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Predict — Fast Miner{% endblock %}
-{% block page_title %}Predict{% endblock %}
+{% block title %}Prediksi - Fast Miner{% endblock %}
+{% block page_title %}Prediksi{% endblock %}
 
 {% block content %}
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>Step 5 — Predict</h4>
+    <h4>Langkah 5 - Prediksi</h4>
     <div class="fm-row" style="gap:8px;">
       {% if bundle.metadata %}
         <span class="badge badge-primary">{{ bundle.metadata.model_name }}</span>
       {% endif %}
-      <span class="badge badge-muted">threshold {{ '%.2f'|format(threshold) }}</span>
+      <span class="badge badge-muted">ambang batas {{ '%.2f'|format(threshold) }}</span>
     </div>
   </div>
 </div>
@@ -19,7 +19,7 @@
 
   <!-- Manual -->
   <div class="fm-card">
-    <div class="fm-card-header"><h5>Manual prediction</h5></div>
+    <div class="fm-card-header"><h5>Prediksi manual</h5></div>
     <div class="fm-card-body">
       <form method="post">
         <input type="hidden" name="mode" value="manual">
@@ -27,20 +27,20 @@
           {% for f in features %}
             <div class="mb-2">
               <label class="form-label">{{ f }}</label>
-              <input class="form-control" name="{{ f }}" placeholder="Enter value">
+              <input class="form-control" name="{{ f }}" placeholder="Masukkan nilai">
             </div>
           {% endfor %}
         </div>
-        <button class="btn btn-primary" type="submit">Predict</button>
+        <button class="btn btn-primary" type="submit">Prediksi</button>
       </form>
 
       {% if result %}
       <div class="alert alert-success mt-3">
         <div>
-          <strong>Prediction:</strong> {{ result.prediction }}<br>
-          <strong>Probability ({{ result.positive_label }}):</strong>
+          <strong>Hasil:</strong> {{ result.prediction }}<br>
+          <strong>Probabilitas ({{ result.positive_label }}):</strong>
           <span class="mono">{{ '%.3f'|format(result.probability) }}</span><br>
-          <strong>Threshold:</strong> {{ '%.2f'|format(result.threshold) }}
+          <strong>Ambang batas:</strong> {{ '%.2f'|format(result.threshold) }}
         </div>
       </div>
       {% endif %}
@@ -49,21 +49,21 @@
 
   <!-- Batch -->
   <div class="fm-card">
-    <div class="fm-card-header"><h5>Batch prediction</h5></div>
+    <div class="fm-card-header"><h5>Prediksi batch</h5></div>
     <div class="fm-card-body">
-      <p>Upload an unlabeled CSV, XLSX, or JSON file. Results are downloaded as a CSV.</p>
+      <p>Unggah file CSV, XLSX, atau JSON tanpa label. Hasil diunduh sebagai CSV.</p>
       <form action="{{ url_for('predict_batch') }}" method="post" enctype="multipart/form-data">
         <div class="mb-3">
           <input class="form-control" type="file" name="file"
                  accept=".csv,.xlsx,.xls,.json" required>
         </div>
-        <button class="btn btn-primary" type="submit">Predict &amp; Download</button>
+        <button class="btn btn-primary" type="submit">Prediksi &amp; Unduh</button>
       </form>
-      <p class="small text-muted mt-2 mb-0">Saved to <code>reports/</code> and logged in history.</p>
+      <p class="small text-muted mt-2 mb-0">Disimpan di <code>reports/</code> dan dicatat di riwayat.</p>
     </div>
   </div>
 
 </div>
 
-<a class="btn btn-outline btn-sm" href="{{ url_for('model_page') }}">Manage Models</a>
+<a class="btn btn-outline btn-sm" href="{{ url_for('model_page') }}">Kelola Model</a>
 {% endblock %}

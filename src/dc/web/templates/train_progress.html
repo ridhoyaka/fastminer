@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Training… — Fast Miner{% endblock %}
+{% block title %}Training… - Fast Miner{% endblock %}
 {% block page_title %}Training{% endblock %}
 
 {% block content %}
@@ -49,7 +49,7 @@
           }
           setTimeout(poll, 1000);
         } else if (data.status === 'done') {
-          status.textContent = 'Complete — redirecting…';
+          status.textContent = 'Complete - redirecting…';
           bar.style.width = '100%';
           bar.classList.remove('progress-bar-animated');
           window.location = data.redirect;

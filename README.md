@@ -58,20 +58,20 @@ python -m dc.web.app
 
 The app launches at `http://127.0.0.1:5000` and opens your browser automatically. It works completely offline with no external dependencies. The interface is organized as tabs/pages:
 
-1. **Data** — upload a file, preview rows, see binary target candidates.
-2. **Explore** — summary statistics, missing values, and class balance. Inspection reports saved to `reports/`.
-3. **Train** — configure test size, folds, seed, metric, candidate models, class weights, and optional search. Training runs in background.
-4. **Evaluate** — metrics at selected threshold, evaluate on labeled data.
-5. **Predict** — manual single-case prediction form, or batch prediction with CSV download.
-6. **Model** — browse and load saved models from `models/`.
-7. **History** — view past training runs, inspections, and batch predictions (remembered across sessions).
-8. **Storage** — see disk usage and delete old uploads, models, reports, or history. Deleting a file also removes its related history and generated report files.
+1. **Data** - upload a file, preview rows, see binary target candidates.
+2. **Explore** - summary statistics, missing values, and class balance. Inspection reports saved to `reports/`.
+3. **Train** - configure test size, folds, seed, metric, candidate models, class weights, and optional search. Training runs in background.
+4. **Evaluate** - metrics at selected threshold, evaluate on labeled data.
+5. **Predict** - manual single-case prediction form, or batch prediction with CSV download.
+6. **Model** - browse and load saved models from `models/`.
+7. **History** - view past training runs, inspections, and batch predictions (remembered across sessions).
+8. **Storage** - see disk usage and delete old uploads, models, reports, or history. Deleting a file also removes its related history and generated report files.
 
 **Simple, documented paths:**
-- `data/uploads/` — uploaded files
-- `models/` — saved models (.joblib) with metadata
-- `reports/` — prediction outputs and inspection reports (.md/.json)
-- `.web_data/history.db` — SQLite database of past analyses
+- `data/uploads/` - uploaded files
+- `models/` - saved models (.joblib) with metadata
+- `reports/` - prediction outputs and inspection reports (.md/.json)
+- `.web_data/history.db` - SQLite database of past analyses
 
 ## Desktop app (Tkinter)
 
@@ -87,12 +87,12 @@ python -m dc.gui.app
 
 The app is organized as six tabs:
 
-1. **Data** — open a file, preview rows, choose the target and positive class, optionally exclude columns.
-2. **Explore** — summary statistics, missing values, and class balance.
-3. **Train** — set test size, folds, seed, metric, candidate models, class weights, and optional search. Training runs in the background.
-4. **Evaluate** — metrics at the selected threshold, confusion matrix, and ROC curve. Move the threshold slider to see the trade-off.
-5. **Predict** — fill in feature values for a single case, or score a whole batch file and export it.
-6. **Model** — save the trained model or reload an existing one.
+1. **Data** - open a file, preview rows, choose the target and positive class, optionally exclude columns.
+2. **Explore** - summary statistics, missing values, and class balance.
+3. **Train** - set test size, folds, seed, metric, candidate models, class weights, and optional search. Training runs in the background.
+4. **Evaluate** - metrics at the selected threshold, confusion matrix, and ROC curve. Move the threshold slider to see the trade-off.
+5. **Predict** - fill in feature values for a single case, or score a whole batch file and export it.
+6. **Model** - save the trained model or reload an existing one.
 
 ## Command line
 
@@ -133,8 +133,8 @@ Predictions include the label, the positive-class probability, and the threshold
 
 ## Sample data
 
-- `data/sample_binary.csv` — 240 labeled rows. Features describe a loan applicant; target `approved` is `True` or `False`.
-- `data/sample_new.csv` — unlabeled rows for batch prediction.
+- `data/sample_binary.csv` - 240 labeled rows. Features describe a loan applicant; target `approved` is `True` or `False`.
+- `data/sample_new.csv` - unlabeled rows for batch prediction.
 
 ## How the model is trained
 
@@ -147,11 +147,11 @@ Predictions include the label, the positive-class probability, and the threshold
 
 ## Output files
 
-- `models/*.joblib` — trained pipeline.
-- `models/*.json` — metadata: target, classes, features, metrics, leaderboard, versions.
-- `reports/*.md` and `reports/*.json` — inspection reports.
-- Prediction files — CSV, Excel, or JSON.
-- `.web_data/history.db` — web app history (SQLite).
+- `models/*.joblib` - trained pipeline.
+- `models/*.json` - metadata: target, classes, features, metrics, leaderboard, versions.
+- `reports/*.md` and `reports/*.json` - inspection reports.
+- Prediction files - CSV, Excel, or JSON.
+- `.web_data/history.db` - web app history (SQLite).
 
 ## Development
 

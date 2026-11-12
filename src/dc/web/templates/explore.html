@@ -1,18 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Explore — Fast Miner{% endblock %}
+{% block title %}Explore - Fast Miner{% endblock %}
 {% block page_title %}Explore{% endblock %}
 
 {% block content %}
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>Step 2 — Explore Dataset</h4>
+    <h4>Step 2 - Explore Dataset</h4>
   </div>
   <div class="fm-card-body">
     <form method="post" class="fm-row fm-form-inline" style="align-items:flex-end;">
       <div>
         <label class="form-label">Target column</label>
         <select class="form-select" name="target" style="min-width:200px;">
-          <option value="">— No target (schema only) —</option>
+          <option value="">- No target (schema only) -</option>
           {% for col in info.schema %}
             <option value="{{ col.name }}" {% if target==col.name %}selected{% endif %}>{{ col.name }}</option>
           {% endfor %}
@@ -59,7 +59,7 @@
 
     {% if info.target %}
     <div class="mt-3">
-      <div class="fm-section-title">Class balance — {{ info.target }}</div>
+      <div class="fm-section-title">Class balance - {{ info.target }}</div>
       <div class="fm-stat-grid">
         {% for c in info.class_balance.classes %}
           <div class="fm-stat-tile">

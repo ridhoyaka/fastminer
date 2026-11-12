@@ -1,20 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Data — Fast Miner{% endblock %}
+{% block title %}Data - Fast Miner{% endblock %}
 {% block page_title %}Data{% endblock %}
 
 {% block content %}
 <div class="fm-card">
   <div class="fm-card-header">
-    <h4>Step 1 — Upload Data</h4>
+    <h4>Step 1 - Upload Data</h4>
   </div>
   <div class="fm-card-body">
     <p>Upload a CSV, XLSX, or JSON file. The target column and positive class can be set when training.</p>
     <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
-      <div class="fm-row fm-form-inline mb-2">
-        <input class="form-control" style="max-width:320px;" type="file" name="file"
+      <div class="fm-row fm-form-inline mb-2" style="align-items:center; gap:8px;">
+        <input class="form-control" style="max-width:280px; flex-shrink:1;" type="file" name="file"
                accept=".csv,.xlsx,.xls,.json" required>
-        <button class="btn btn-primary" type="submit">Upload &amp; Load</button>
-        <a class="btn btn-outline-danger btn-sm" href="{{ url_for('storage_page') }}">Delete old uploads</a>
+        <button class="btn btn-primary" type="submit" style="flex-shrink:0;">Upload &amp; Load</button>
+        <a class="btn btn-outline-danger btn-sm" style="flex-shrink:0;" href="{{ url_for('storage_page') }}">Delete old uploads</a>
       </div>
     </form>
     <p class="small text-muted mb-0">Saved to <code>data/uploads/</code></p>
